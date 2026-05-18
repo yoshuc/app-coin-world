@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#EF4444"/>
+  <circle cx="256" cy="230" r="130" fill="#F97316"/>
+  <circle cx="256" cy="230" r="110" fill="#FBBF24"/>
+  <text x="256" y="270" font-family="Arial" font-weight="900" font-size="130" text-anchor="middle" fill="#EF4444">¢</text>
+  <text x="256" y="430" font-family="Arial" font-weight="900" font-size="52" text-anchor="middle" fill="white">COIN WORLD</text>
+</svg>
