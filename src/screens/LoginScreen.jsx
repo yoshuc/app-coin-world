@@ -3,20 +3,45 @@ import { useNavigate } from 'react-router-dom'
 import ProLogo, { PRO, PRO_FONT } from '../components/ProLogo.jsx'
 import ProLangToggle from '../components/ProLangToggle.jsx'
 import ProField from '../components/ProField.jsx'
+import { supabase } from '../lib/supabase.js'
 import { t } from '../i18n/strings.js'
 
-export default function LoginScreen({ lang, setLang, auth }) {
+const ERROR_MESSAGES = {
+  email_not_confirmed: {
+    es: 'Confirma tu correo antes de iniciar sesión. Revisa tu bandeja.',
+    en: 'Please confirm your email before signing in. Check your inbox.',
+  },
+  invalid_login_credentials: {
+    es: 'Correo o contraseña incorrectos.',
+    en: 'Incorrect email or password.',
+  },
+  user_not_found: {
+    es: 'No encontramos una cuenta con ese correo.',
+    en: 'No account found with that email.',
+  },
+  over_email_send_rate_limit: {
+    es: 'Demasiados intentos. Espera unos minutos.',
+    en: 'Too many attempts. Please wait a few minutes.',
+  },
+}
+
+export default function LoginScreen({ lang, setLang, auth, initialError }) {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
-  const [pw, setPw] = useState('')
+  const [email, setEmailState] = useState('')
+  const [pw, setPwState] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [touched, setTouched] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [serverError, setServerError] = useState('')
+  const [serverError, setServerError] = useState(initialError || '')
+  const [showResend, setShowResend] = useState(initialError === 'confirmation_expired')
+  const [resendStatus, setResendStatus] = useState('')
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   const pwValid = pw.length >= 6
   const canSubmit = emailValid && pwValid
+
+  function setEmail(v) { setEmailState(v); setServerError(''); setResendStatus('') }
+  function setPw(v) { setPwState(v); setServerError('') }
 
   async function submit(e) {
     e && e.preventDefault()
@@ -24,15 +49,42 @@ export default function LoginScreen({ lang, setLang, auth }) {
     if (!canSubmit) return
     setLoading(true)
     setServerError('')
+    setShowResend(false)
     try {
       await auth.signIn({ email, password: pw })
       navigate('/app')
     } catch (err) {
-      setServerError(t(lang, 'loginError') || 'Invalid email or password.')
+      const code = err.code || err.message?.toLowerCase().replace(/\s+/g, '_')
+      const msgMap = ERROR_MESSAGES[code]
+      const msg = msgMap
+        ? (msgMap[lang] || msgMap.en)
+        : (err.message || (lang === 'es' ? 'Algo salió mal.' : 'Something went wrong.'))
+      setServerError(msg)
+      if (code === 'email_not_confirmed') setShowResend(true)
     } finally {
       setLoading(false)
     }
   }
+
+  async function handleResend() {
+    if (!emailValid) {
+      setResendStatus(lang === 'es' ? 'Escribe tu correo primero.' : 'Enter your email address first.')
+      return
+    }
+    setResendStatus('...')
+    const { error } = await supabase.auth.resend({ type: 'signup', email })
+    if (error) {
+      setResendStatus(lang === 'es'
+        ? 'No se pudo enviar. Verifica el correo.'
+        : 'Could not send email. Make sure the address is correct.')
+    } else {
+      setResendStatus(lang === 'es'
+        ? '¡Correo enviado! Revisa tu bandeja.'
+        : 'Confirmation email sent! Check your inbox.')
+    }
+  }
+
+  const expiredBanner = initialError === 'confirmation_expired'
 
   return (
     <div style={{
@@ -82,12 +134,43 @@ export default function LoginScreen({ lang, setLang, auth }) {
             fontSize: 14, color: PRO.mute, fontWeight: 500, lineHeight: 1.4,
           }}>{t(lang, 'enterToContinue')}</p>
 
+          {expiredBanner && !serverError && (
+            <div style={{
+              background: '#FEF9C3', border: '1px solid #EAB308', borderRadius: 8,
+              padding: '10px 14px', marginBottom: 14,
+              fontSize: 13, color: '#854D0E', fontWeight: 600,
+            }}>
+              {lang === 'es'
+                ? 'Tu enlace de confirmación ha expirado.'
+                : 'Your email confirmation link has expired.'}
+            </div>
+          )}
+
           {serverError && (
             <div style={{
               background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: 8,
-              padding: '10px 14px', marginBottom: 14,
+              padding: '10px 14px', marginBottom: showResend ? 6 : 14,
               fontSize: 13, color: '#DC2626', fontWeight: 600,
             }}>{serverError}</div>
+          )}
+
+          {(showResend || expiredBanner) && (
+            <div style={{ marginBottom: 14 }}>
+              <button type="button" onClick={handleResend} style={{
+                appearance: 'none', border: 'none', background: 'transparent',
+                cursor: 'pointer', padding: 0,
+                color: PRO.brand, fontFamily: PRO_FONT, fontWeight: 600, fontSize: 13,
+                textDecoration: 'underline', textUnderlineOffset: 3,
+              }}>
+                {lang === 'es' ? 'Reenviar correo de confirmación' : 'Resend confirmation email'}
+              </button>
+              {resendStatus && (
+                <div style={{
+                  marginTop: 6, fontSize: 12, fontWeight: 500,
+                  color: resendStatus === '...' ? PRO.mute : resendStatus.includes('sent') || resendStatus.includes('enviado') ? '#166534' : '#DC2626',
+                }}>{resendStatus}</div>
+              )}
+            </div>
           )}
 
           <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

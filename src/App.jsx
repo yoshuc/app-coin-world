@@ -166,6 +166,15 @@ function PublicScreenWrapper({ children }) {
 export default function App() {
   const auth = useAuth()
   const { lang, setLang } = useLang()
+  const [authError, setAuthError] = useState(null)
+
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash.includes('error=access_denied') && hash.includes('error_code=otp_expired')) {
+      window.history.replaceState(null, '', window.location.pathname)
+      setAuthError('confirmation_expired')
+    }
+  }, [])
 
   return (
     <BrowserRouter>
@@ -186,7 +195,7 @@ export default function App() {
           } />
           <Route path="/login" element={
             <PublicScreenWrapper>
-              <LoginScreen lang={lang} setLang={setLang} auth={auth} />
+              <LoginScreen lang={lang} setLang={setLang} auth={auth} initialError={authError} />
             </PublicScreenWrapper>
           } />
           <Route path="/register" element={
