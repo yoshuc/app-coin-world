@@ -15,9 +15,9 @@ function ProChoiceCard({ primary, title, subtitle, onClick, iconKind }) {
   }
   const style = primary ? {
     ...styleBase,
-    background: hover ? '#16A34A' : PRO.brandSolid,
+    background: hover ? '#166534' : '#15803D',
     color: '#FFFFFF', border: 'none',
-    boxShadow: hover ? '0 8px 24px rgba(34,197,94,0.34)' : '0 4px 14px rgba(34,197,94,0.22)',
+    boxShadow: hover ? '0 8px 24px rgba(21,128,61,0.34)' : '0 4px 14px rgba(21,128,61,0.22)',
     transform: hover ? 'translateY(-1px)' : 'translateY(0)',
   } : {
     ...styleBase,
@@ -55,7 +55,7 @@ function ProChoiceCard({ primary, title, subtitle, onClick, iconKind }) {
         <span style={{ display: 'block', fontWeight: 700, fontSize: 16, letterSpacing: '-0.01em', lineHeight: 1.25 }}>
           {title}
         </span>
-        <span style={{ display: 'block', fontWeight: 500, fontSize: 13, opacity: primary ? 0.85 : 0.7, marginTop: 2 }}>
+        <span style={{ display: 'block', fontWeight: 500, fontSize: 13, color: primary ? 'rgba(255,255,255,0.9)' : '#166534', marginTop: 2 }}>
           {subtitle}
         </span>
       </span>

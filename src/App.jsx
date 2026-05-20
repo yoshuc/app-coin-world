@@ -177,6 +177,7 @@ export default function App() {
         position: 'relative', overflow: 'hidden',
       }}>
         <Suspense fallback={null}>
+        <main style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <Routes>
           <Route path="/" element={
             <PublicScreenWrapper>
@@ -210,6 +211,7 @@ export default function App() {
           } />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </main>
         </Suspense>
       </div>
     </BrowserRouter>
