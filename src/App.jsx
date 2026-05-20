@@ -4,6 +4,7 @@ import { useAuth } from './hooks/useAuth.js'
 import { useLang } from './hooks/useLang.js'
 import { BUILDINGS } from './constants/buildings.js'
 import BottomNav from './components/BottomNav.jsx'
+import MonedaOnboarding from './components/MonedaOnboarding.jsx'
 
 import WelcomeScreen from './screens/WelcomeScreen.jsx'
 import LoginScreen from './screens/LoginScreen.jsx'
@@ -36,6 +37,17 @@ function AppShell({ lang, setLang, auth }) {
   const [points, setPoints] = useState(auth.child?.points ?? 24)
   const [unlocked, setUnlocked] = useState([BUILDINGS[0].id])
   const [todayEarned, setTodayEarned] = useState(0)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+  useEffect(() => {
+    // Session count
+    const count = parseInt(localStorage.getItem('cw_session_count') || '0', 10) + 1
+    localStorage.setItem('cw_session_count', String(count))
+    // Onboarding
+    if (!localStorage.getItem('cw_onboarding_seen')) {
+      setShowOnboarding(true)
+    }
+  }, [])
 
   useEffect(() => {
     if (auth.child) {
@@ -113,12 +125,22 @@ function AppShell({ lang, setLang, auth }) {
         {tab === 'learn' && (
           <LessonScreen
             lang={lang} setLang={setLang} points={points}
-            setPoints={setPoints} awardEarn={awardEarn}
+            setPoints={setPoints} awardEarn={awardEarn} auth={auth}
           />
         )}
       </div>
 
       <BottomNav tab={tab} onTab={setTab} lang={lang} />
+
+      {showOnboarding && (
+        <MonedaOnboarding
+          lang={lang}
+          onDone={() => {
+            localStorage.setItem('cw_onboarding_seen', '1')
+            setShowOnboarding(false)
+          }}
+        />
+      )}
     </div>
   )
 }
