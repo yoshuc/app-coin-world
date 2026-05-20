@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase.js'
 import ChunkyButton, { COLORS } from '../components/ChunkyButton.jsx'
 import LangPill from '../components/LangPill.jsx'
 import { Moneda } from '../components/Art.jsx'
@@ -205,6 +206,13 @@ export default function RegisterChildScreen({ lang, setLang, auth }) {
     setLoading(true)
     setServerError('')
     try {
+      let { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        await new Promise(r => setTimeout(r, 1000))
+        const retry = await supabase.auth.getSession()
+        session = retry.data.session
+      }
+      if (!session) throw new Error(t(lang, 'errRequired'))
       await auth.addChild({
         first_name: form.firstName,
         last_name: form.lastName,

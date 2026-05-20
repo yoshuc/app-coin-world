@@ -75,6 +75,11 @@ export function useAuth() {
   const signIn = useCallback(async ({ email, password }) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
+    // Ensure session state is updated before caller proceeds
+    if (data.session) {
+      setSession(data.session)
+      setUser(data.session.user)
+    }
     return data
   }, [])
 

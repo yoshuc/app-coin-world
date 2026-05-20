@@ -188,6 +188,7 @@ export default function RegisterScreen({ mode = 'adult', lang, setLang, auth }) 
         gender: form.gender,
       })
       if (isTutor) {
+        await auth.signIn({ email: form.email, password: form.password })
         navigate('/register/child')
       } else {
         navigate('/app')
