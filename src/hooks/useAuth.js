@@ -61,20 +61,14 @@ export function useAuth() {
   }
 
   const signUp = useCallback(async ({ email, password, role, first_name, last_name, dob, gender }) => {
-    const { data, error } = await supabase.auth.signUp({ email, password })
-    if (error) throw error
-
-    const { error: profileError } = await supabase.from('users').insert({
-      id: data.user.id,
+    const { data, error } = await supabase.auth.signUp({
       email,
-      role,
-      first_name,
-      last_name,
-      dob,
-      gender,
+      password,
+      options: {
+        data: { role, first_name, last_name, dob, gender },
+      },
     })
-    if (profileError) throw profileError
-
+    if (error) throw error
     return data
   }, [])
 
