@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth.js'
 import { useLang } from './hooks/useLang.js'
@@ -6,13 +6,13 @@ import { BUILDINGS } from './constants/buildings.js'
 import BottomNav from './components/BottomNav.jsx'
 import MonedaOnboarding from './components/MonedaOnboarding.jsx'
 
-import WelcomeScreen from './screens/WelcomeScreen.jsx'
-import LoginScreen from './screens/LoginScreen.jsx'
-import RegisterScreen from './screens/RegisterScreen.jsx'
-import RegisterChildScreen from './screens/RegisterChildScreen.jsx'
-import HomeScreen from './screens/HomeScreen.jsx'
-import MarketScreen from './screens/MarketScreen.jsx'
-import LessonScreen from './screens/LessonScreen.jsx'
+const WelcomeScreen = lazy(() => import('./screens/WelcomeScreen.jsx'))
+const LoginScreen = lazy(() => import('./screens/LoginScreen.jsx'))
+const RegisterScreen = lazy(() => import('./screens/RegisterScreen.jsx'))
+const RegisterChildScreen = lazy(() => import('./screens/RegisterChildScreen.jsx'))
+const HomeScreen = lazy(() => import('./screens/HomeScreen.jsx'))
+const MarketScreen = lazy(() => import('./screens/MarketScreen.jsx'))
+const LessonScreen = lazy(() => import('./screens/LessonScreen.jsx'))
 
 function AuthGuard({ children, auth }) {
   const location = useLocation()
@@ -176,6 +176,7 @@ export default function App() {
         maxWidth: 430, margin: '0 auto',
         position: 'relative', overflow: 'hidden',
       }}>
+        <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={
             <PublicScreenWrapper>
@@ -209,6 +210,7 @@ export default function App() {
           } />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </div>
     </BrowserRouter>
   )

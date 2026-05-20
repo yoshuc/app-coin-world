@@ -7,6 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'script-defer',
       includeAssets: ['favicon.ico', 'icons/*.png', 'icons/*.svg'],
       manifest: {
         name: 'Coin World / Mundo Moneda',

@@ -28,6 +28,29 @@
   </head>
   <body>
     <div id="root"></div>
+    <div id="app-shell" style="
+      position:fixed; inset:0;
+      background:#FFFBEB;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      font-family:Fredoka,sans-serif;
+    ">
+      <div style="font-size:48px">🪙</div>
+      <div style="font-size:20px;font-weight:700;
+        color:#1F1108;margin-top:12px">
+        Coin World
+      </div>
+      <div style="width:48px;height:4px;background:#EF4444;
+        border-radius:2px;margin-top:16px;
+        animation:pulse 1s ease-in-out infinite alternate">
+      </div>
+    </div>
+    <style>
+      @keyframes pulse{to{opacity:.3}}
+      #root:not(:empty) + #app-shell,
+      #root:not(:empty) ~ #app-shell,
+      #app-shell:has(~ #root:not(:empty)){display:none}
+    </style>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html> 
