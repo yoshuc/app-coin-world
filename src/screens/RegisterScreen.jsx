@@ -97,12 +97,12 @@ function ProCheckbox({ checked, onChange, error, children }) {
   return (
     <div>
       <label style={{
-        display: 'flex', alignItems: 'flex-start', gap: 10,
-        cursor: 'pointer', userSelect: 'none',
+        display: 'flex', alignItems: 'flex-start', gap: 12,
+        cursor: 'pointer', userSelect: 'none', padding: '8px 0',
       }}>
         <span onClick={() => onChange(!checked)} style={{
           flexShrink: 0, marginTop: 1,
-          width: 20, height: 20, borderRadius: 6,
+          minWidth: 20, minHeight: 20, width: 20, height: 20, borderRadius: 6,
           background: checked ? PRO.brandSolid : '#FFFFFF',
           border: `1.5px solid ${checked ? PRO.brandSolid : (error ? '#EF4444' : PRO.inputBorder)}`,
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -188,7 +188,6 @@ export default function RegisterScreen({ mode = 'adult', lang, setLang, auth }) 
         gender: form.gender,
       })
       if (isTutor) {
-        await auth.signIn({ email: form.email, password: form.password })
         navigate('/register/child')
       } else {
         navigate('/app')

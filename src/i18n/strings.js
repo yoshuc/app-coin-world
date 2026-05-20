@@ -110,6 +110,10 @@ export const STRINGS = {
   addAnother:      { es: '+ Agregar otro menor', en: '+ Add another child' },
   monedaWelcome:   { es: '¡Hola! Soy Moneda. ¿Quién va a aprender conmigo hoy?',
                      en: "Hi! I'm Coiny. Who's learning with me today?" },
+  confirmEmailBanner: { es: 'Confirma tu correo · Revisa tu bandeja para activar tu cuenta.',
+                         en: 'Please confirm your email · Check your inbox to activate your account.' },
+  resendEmail:     { es: 'Reenviar', en: 'Resend email' },
+  registerError:   { es: 'Error al registrar. Intenta de nuevo.', en: 'Registration error. Please try again.' },
 };
 
 export function t(lang, key) {

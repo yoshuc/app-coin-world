@@ -1,14 +1,82 @@
+import { useState, useEffect } from 'react'
 import ScreenHeader from '../components/ScreenHeader.jsx'
 import ChunkyButton, { COLORS } from '../components/ChunkyButton.jsx'
 import { Building, Moneda } from '../components/Art.jsx'
 import { BUILDINGS } from '../constants/buildings.js'
 import { t } from '../i18n/strings.js'
+import { supabase } from '../lib/supabase.js'
+
+function EmailBanner({ lang }) {
+  const [dismissed, setDismissed] = useState(false)
+  const [show, setShow] = useState(false)
+  const [userEmail, setUserEmail] = useState('')
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user && !data.user.email_confirmed_at) {
+        setShow(true)
+        setUserEmail(data.user.email || '')
+      }
+    })
+  }, [])
+
+  if (!show || dismissed) return null
+
+  function resend() {
+    if (userEmail) {
+      supabase.auth.resend({ type: 'signup', email: userEmail })
+    }
+  }
+
+  return (
+    <div style={{
+      background: '#FEF9C3',
+      borderBottom: '2px solid #EAB308',
+      padding: '10px 16px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      fontFamily: 'Fredoka',
+      fontSize: 14,
+      color: '#1F1108',
+      flexWrap: 'wrap',
+    }}>
+      <span style={{ flex: 1 }}>
+        {t(lang, 'confirmEmailBanner')}
+      </span>
+      <button
+        onClick={resend}
+        style={{
+          appearance: 'none', border: 'none', background: 'transparent',
+          color: '#D97706', fontFamily: 'Fredoka', fontWeight: 700, fontSize: 14,
+          cursor: 'pointer', padding: 0, textDecoration: 'underline',
+        }}
+      >
+        {t(lang, 'resendEmail')}
+      </button>
+      <button
+        onClick={() => setDismissed(true)}
+        aria-label="dismiss"
+        style={{
+          appearance: 'none', border: 'none', background: 'transparent',
+          cursor: 'pointer', padding: 4, color: '#92400E', display: 'flex', alignItems: 'center',
+        }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  )
+}
 
 export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, goLearn, todayEarned }) {
   const unlockedCount = unlocked.length
   const total = BUILDINGS.length
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <EmailBanner lang={lang} />
       <ScreenHeader
         color={COLORS.red} lang={lang} onLang={setLang} points={points}
         titleEs="Mi Pueblo" titleEn="My Town"
