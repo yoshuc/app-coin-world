@@ -3,7 +3,7 @@ import LangPill from './LangPill.jsx'
 
 export default function ScreenHeader({ color, lang, onLang, points, titleEs, titleEn, subtitle, onProfile, childName, childEmoji }) {
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', zIndex: 2 }}>
       <div style={{
         background: color, padding: '14px 18px 38px',
         borderBottomLeftRadius: 28, borderBottomRightRadius: 28,

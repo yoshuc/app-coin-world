@@ -199,7 +199,7 @@ export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, 
         childEmoji={childEmoji}
       />
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px 140px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '22px 16px 140px' }}>
         <div style={{
           background: COLORS.yellow, borderRadius: 18,
           border: `3px solid ${COLORS.ink}`, boxShadow: `0 4px 0 ${COLORS.ink}`,

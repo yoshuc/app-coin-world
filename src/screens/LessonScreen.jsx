@@ -201,7 +201,7 @@ function LessonMap({ lang, progress, onSelect, onLockedMsg }) {
 }
 
 // ─── Active Lesson (View B) ───────────────────────────────────────────────────
-function ActiveLesson({ lesson, lang, awardEarn, onLessonComplete, onBack }) {
+function ActiveLesson({ lesson, lang, awardEarn, onLessonComplete, onBack, onNextLesson, onGoTown }) {
   const questions = lesson.questions
   const [qIdx, setQIdx] = useState(0)
   const [selected, setSelected] = useState(null)
@@ -257,17 +257,70 @@ function ActiveLesson({ lesson, lang, awardEarn, onLessonComplete, onBack }) {
   useEffect(() => () => clearTimeout(shakeTimer.current), [])
 
   if (done) {
+    const nextLesson = LESSONS.find(l => l.id === lesson.id + 1)
+    const isVeryLast = lesson.id === 20
+    const isLastInUnit = lesson.isUnitChallenge
+
+    const primaryLabel = isVeryLast
+      ? (lang === 'es' ? '¡Lo logré! 🏆' : 'I did it! 🏆')
+      : isLastInUnit
+        ? (lang === 'es' ? '¡Siguiente Unidad! 🎉' : 'Next Unit! 🎉')
+        : (lang === 'es' ? '¡Siguiente Lección! →' : 'Next Lesson! →')
+
+    const secondaryLabel = isVeryLast
+      ? (lang === 'es' ? 'Ver mi Ciudad' : 'See my Town')
+      : (lang === 'es' ? 'Ver Mapa' : 'Back to Map')
+
+    function handlePrimary() {
+      if (isVeryLast) { onBack(); return }
+      if (nextLesson) onNextLesson(nextLesson)
+      else onBack()
+    }
+
+    function handleSecondary() {
+      if (isVeryLast && onGoTown) onGoTown()
+      else onBack()
+    }
+
     return (
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18, padding: '20px 24px 140px', textAlign: 'center' }}>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '20px 24px 140px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        {/* confetti burst for unit completions */}
+        {isLastInUnit && (
+          <svg width="100%" height="100%" viewBox="0 0 375 600"
+               style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+            {[...Array(24)].map((_, i) => {
+              const x = 30 + (i * 41) % 320
+              const y = 60 + (i * 53) % 480
+              const c = ['#EF4444','#F97316','#22C55E','#3B82F6','#A855F7','#FBBF24'][i % 6]
+              return <circle key={i} cx={x} cy={y} r={5 + (i % 3) * 2} fill={c}
+                       style={{ animation: `cwPop 1.6s ${i * 22}ms cubic-bezier(.2,.8,.2,1) forwards`, opacity: 0 }} />
+            })}
+          </svg>
+        )}
+
         <Moneda size={140} mood="cheer" wave />
+
+        {isLastInUnit && (
+          <div style={{
+            fontFamily: FONT, fontWeight: 800, fontSize: 22,
+            color: COLORS.yellow, background: COLORS.ink,
+            borderRadius: 14, padding: '8px 20px',
+            animation: 'cwPunch 0.5s cubic-bezier(.2,.9,.2,1.3) forwards',
+          }}>
+            🎉 {lang === 'es' ? '¡Unidad completa!' : 'Unit complete!'}
+          </div>
+        )}
+
         <div style={{
           fontFamily: FONT, fontWeight: 800, fontSize: 36, lineHeight: 1,
           color: COLORS.purple, letterSpacing: '-0.02em',
           textShadow: `3px 3px 0 ${COLORS.ink}`,
         }}>{t(lang, 'lessonDone')}</div>
+
         <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 18, color: COLORS.ink }}>
           {t(lang, 'rewardPts')} <strong>+{lesson.coinReward} {t(lang, 'points')}</strong>
         </div>
+
         {lesson.unlocksBuilding && (
           <div style={{
             fontFamily: FONT, fontWeight: 700, fontSize: 16, color: COLORS.yellow,
@@ -276,9 +329,26 @@ function ActiveLesson({ lesson, lang, awardEarn, onLessonComplete, onBack }) {
             🏗️ {lang === 'es' ? '¡Edificio desbloqueado!' : 'Building unlocked!'}
           </div>
         )}
-        <ChunkyButton color={COLORS.purple} style={{ color: '#FFFBEB' }} onClick={onBack}>
-          {lang === 'es' ? '← Volver al mapa' : '← Back to map'}
+
+        {/* PRIMARY — next lesson / next unit / done */}
+        <ChunkyButton
+          color={isVeryLast ? COLORS.yellow : COLORS.green}
+          fullWidth
+          style={{ color: isVeryLast ? COLORS.ink : '#FFFBEB', fontSize: 20, marginTop: 4 }}
+          onClick={handlePrimary}
+        >
+          {primaryLabel}
         </ChunkyButton>
+
+        {/* SECONDARY — back to map / see town */}
+        <button onClick={handleSecondary} style={{
+          appearance: 'none', cursor: 'pointer', background: 'transparent',
+          border: `2.5px solid ${COLORS.ink}`, borderRadius: 14,
+          padding: '10px 20px', width: '100%',
+          fontFamily: FONT, fontWeight: 700, fontSize: 16, color: COLORS.ink,
+        }}>
+          {secondaryLabel}
+        </button>
       </div>
     )
   }
@@ -382,7 +452,7 @@ function ActiveLesson({ lesson, lang, awardEarn, onLessonComplete, onBack }) {
 // NOTE: the progress table requires a unique constraint on (child_id, lesson_id)
 // for upsert to work. Run once in Supabase SQL editor if not already applied:
 //   ALTER TABLE progress ADD CONSTRAINT progress_child_lesson_unique UNIQUE (child_id, lesson_id);
-export default function LessonScreen({ lang, setLang, points, setPoints, awardEarn, auth, onProfile, childName, childEmoji }) {
+export default function LessonScreen({ lang, setLang, points, setPoints, awardEarn, auth, onProfile, childName, childEmoji, onGoTown }) {
   const [activeLesson, setActiveLesson] = useState(null)
   const [lockedMsg, setLockedMsg] = useState(null)
   const [progress, setProgress] = useState([])
@@ -522,6 +592,8 @@ export default function LessonScreen({ lang, setLang, points, setPoints, awardEa
             awardEarn={awardEarn}
             onLessonComplete={handleLessonComplete}
             onBack={() => setActiveLesson(null)}
+            onNextLesson={nextLesson => setActiveLesson(nextLesson)}
+            onGoTown={onGoTown}
           />
         </>
       )}

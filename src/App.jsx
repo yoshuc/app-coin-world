@@ -166,6 +166,7 @@ function AppShell({ lang, setLang, auth }) {
             onProfile={() => setShowGate(true)}
             childName={childName}
             childEmoji={childEmoji}
+            onGoTown={() => setTab('town')}
           />
         )}
       </div>
