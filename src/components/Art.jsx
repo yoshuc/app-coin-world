@@ -1,7 +1,7 @@
 // Art.jsx — Moneda character + flat building/item SVGs
 // Ported verbatim from prototype art.jsx
 
-export function Moneda({ size = 88, mood = 'happy', wave = false }) {
+export function Moneda({ size = 88, mood = 'happy', wave = false, onClick }) {
   const eye = (cx) => (
     <g key={cx}>
       <ellipse cx={cx} cy="44" rx="5.5" ry="6.5" fill="#1F1108" />
@@ -22,29 +22,38 @@ export function Moneda({ size = 88, mood = 'happy', wave = false }) {
   }
 
   return (
-    <svg viewBox="0 0 100 120" width={size} height={size * 1.2} style={{ overflow: 'visible' }}>
-      <ellipse cx="50" cy="116" rx="26" ry="3.5" fill="#000" opacity="0.12" />
-      <path d="M36 92 L34 110" stroke="#1F1108" strokeWidth="5" strokeLinecap="round" />
-      <path d="M64 92 L66 110" stroke="#1F1108" strokeWidth="5" strokeLinecap="round" />
-      <ellipse cx="32" cy="113" rx="8" ry="3.5" fill="#1F1108" />
-      <ellipse cx="68" cy="113" rx="8" ry="3.5" fill="#1F1108" />
-      <circle cx="50" cy="50" r="40" fill="#FBBF24" stroke="#1F1108" strokeWidth="4" />
-      <circle cx="50" cy="50" r="33" fill="none" stroke="#F59E0B" strokeWidth="3" />
-      <text x="50" y="32" textAnchor="middle" fontFamily="Fredoka, sans-serif" fontWeight="700"
-            fontSize="14" fill="#F59E0B" opacity="0.7">$</text>
-      {eye(37)}{eye(63)}
-      {blush(28)}{blush(72)}
-      {mouth}
-      {wave ? (
-        <>
-          <path d="M14 60 Q4 40 16 28" stroke="#1F1108" strokeWidth="5" strokeLinecap="round" fill="none" />
-          <circle cx="16" cy="28" r="5" fill="#1F1108" />
-        </>
-      ) : (
-        <path d="M14 60 Q6 70 14 82" stroke="#1F1108" strokeWidth="5" strokeLinecap="round" fill="none" />
-      )}
-      <path d="M86 60 Q94 70 86 82" stroke="#1F1108" strokeWidth="5" strokeLinecap="round" fill="none" />
-    </svg>
+    <div
+      onClick={onClick}
+      style={{
+        display: 'inline-block',
+        ...(onClick ? { cursor: 'pointer', pointerEvents: 'auto' } : {}),
+      }}
+    >
+      <svg viewBox="0 0 100 120" width={size} height={size * 1.2}
+           style={{ overflow: 'visible', display: 'block' }}>
+        <ellipse cx="50" cy="116" rx="26" ry="3.5" fill="#000" opacity="0.12" />
+        <path d="M36 92 L34 110" stroke="#1F1108" strokeWidth="5" strokeLinecap="round" />
+        <path d="M64 92 L66 110" stroke="#1F1108" strokeWidth="5" strokeLinecap="round" />
+        <ellipse cx="32" cy="113" rx="8" ry="3.5" fill="#1F1108" />
+        <ellipse cx="68" cy="113" rx="8" ry="3.5" fill="#1F1108" />
+        <circle cx="50" cy="50" r="40" fill="#FBBF24" stroke="#1F1108" strokeWidth="4" />
+        <circle cx="50" cy="50" r="33" fill="none" stroke="#F59E0B" strokeWidth="3" />
+        <text x="50" y="32" textAnchor="middle" fontFamily="Fredoka, sans-serif" fontWeight="700"
+              fontSize="14" fill="#F59E0B" opacity="0.7">$</text>
+        {eye(37)}{eye(63)}
+        {blush(28)}{blush(72)}
+        {mouth}
+        {wave ? (
+          <>
+            <path d="M14 60 Q4 40 16 28" stroke="#1F1108" strokeWidth="5" strokeLinecap="round" fill="none" />
+            <circle cx="16" cy="28" r="5" fill="#1F1108" />
+          </>
+        ) : (
+          <path d="M14 60 Q6 70 14 82" stroke="#1F1108" strokeWidth="5" strokeLinecap="round" fill="none" />
+        )}
+        <path d="M86 60 Q94 70 86 82" stroke="#1F1108" strokeWidth="5" strokeLinecap="round" fill="none" />
+      </svg>
+    </div>
   )
 }
 

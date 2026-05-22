@@ -382,11 +382,12 @@ function ActiveLesson({ lesson, lang, awardEarn, onLessonComplete, onBack }) {
 // NOTE: the progress table requires a unique constraint on (child_id, lesson_id)
 // for upsert to work. Run once in Supabase SQL editor if not already applied:
 //   ALTER TABLE progress ADD CONSTRAINT progress_child_lesson_unique UNIQUE (child_id, lesson_id);
-export default function LessonScreen({ lang, setLang, points, setPoints, awardEarn, auth }) {
+export default function LessonScreen({ lang, setLang, points, setPoints, awardEarn, auth, onProfile, childName, childEmoji }) {
   const [activeLesson, setActiveLesson] = useState(null)
   const [lockedMsg, setLockedMsg] = useState(null)
   const [progress, setProgress] = useState([])
   const [progressLoading, setProgressLoading] = useState(true)
+  const [showMonedaTip, setShowMonedaTip] = useState(false)
 
   // Depend on auth.loadProgress (stable useCallback ref) instead of the whole auth
   // object, which is a new reference on every parent render. This effect re-runs
@@ -426,6 +427,9 @@ export default function LessonScreen({ lang, setLang, points, setPoints, awardEa
           <ScreenHeader
             color={COLORS.purple} lang={lang} onLang={setLang} points={points}
             titleEs="Aprender" titleEn="Learn"
+            onProfile={onProfile}
+            childName={childName}
+            childEmoji={childEmoji}
           />
 
           {progressLoading ? (
@@ -461,7 +465,21 @@ export default function LessonScreen({ lang, setLang, points, setPoints, awardEa
                   🔒 {lang === 'es' ? 'Completa las lecciones anteriores primero' : 'Complete previous lessons first'}
                 </div>
               )}
-              <Moneda size={64} mood={lockedMsg ? 'sad' : 'cheer'} wave={!lockedMsg} />
+              {showMonedaTip && !lockedMsg && (
+                <div style={{
+                  background: '#FFFBEB', border: `3px solid ${COLORS.ink}`,
+                  borderRadius: 14, padding: '8px 14px', marginBottom: 8,
+                  fontFamily: FONT, fontWeight: 600, fontSize: 14, color: COLORS.ink,
+                  maxWidth: 200, textAlign: 'center',
+                  boxShadow: `0 3px 0 ${COLORS.ink}`,
+                }}>
+                  {lang === 'es' ? '¡Completa lecciones para ganar monedas! 🪙' : 'Complete lessons to earn coins! 🪙'}
+                </div>
+              )}
+              <div style={{ pointerEvents: 'auto' }}>
+                <Moneda size={64} mood={lockedMsg ? 'sad' : 'cheer'} wave={!lockedMsg}
+                  onClick={() => setShowMonedaTip(v => !v)} />
+              </div>
             </div>
           )}
         </>
