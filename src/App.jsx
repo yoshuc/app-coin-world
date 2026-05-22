@@ -5,6 +5,9 @@ import { useLang } from './hooks/useLang.js'
 import { BUILDINGS } from './constants/buildings.js'
 import BottomNav from './components/BottomNav.jsx'
 import MonedaOnboarding from './components/MonedaOnboarding.jsx'
+import ParentalGate from './components/ParentalGate.jsx'
+
+const ProfileScreen = lazy(() => import('./screens/ProfileScreen.jsx'))
 
 const WelcomeScreen = lazy(() => import('./screens/WelcomeScreen.jsx'))
 const LoginScreen = lazy(() => import('./screens/LoginScreen.jsx'))
@@ -38,6 +41,8 @@ function AppShell({ lang, setLang, auth }) {
   const [unlocked, setUnlocked] = useState([BUILDINGS[0].id])
   const [todayEarned, setTodayEarned] = useState(0)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showGate, setShowGate] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
 
   useEffect(() => {
     // Session count
@@ -118,6 +123,7 @@ function AppShell({ lang, setLang, auth }) {
             activeChild={auth.child}
             switchChild={auth.switchChild}
             addChild={auth.addChild}
+            onProfile={() => setShowGate(true)}
           />
         )}
         {tab === 'market' && (
@@ -144,6 +150,24 @@ function AppShell({ lang, setLang, auth }) {
             setShowOnboarding(false)
           }}
         />
+      )}
+
+      {showGate && (
+        <ParentalGate
+          lang={lang}
+          onPass={() => { setShowGate(false); setShowProfile(true) }}
+          onClose={() => setShowGate(false)}
+        />
+      )}
+
+      {showProfile && (
+        <Suspense fallback={null}>
+          <ProfileScreen
+            lang={lang}
+            auth={auth}
+            onClose={() => setShowProfile(false)}
+          />
+        </Suspense>
       )}
     </div>
   )

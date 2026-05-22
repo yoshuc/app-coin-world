@@ -1,7 +1,7 @@
 import CoinPill from './CoinPill.jsx'
 import LangPill from './LangPill.jsx'
 
-export default function ScreenHeader({ color, lang, onLang, points, titleEs, titleEn, subtitle }) {
+export default function ScreenHeader({ color, lang, onLang, points, titleEs, titleEn, subtitle, onProfile }) {
   return (
     <div style={{ position: 'relative' }}>
       <div style={{
@@ -11,7 +11,25 @@ export default function ScreenHeader({ color, lang, onLang, points, titleEs, tit
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <CoinPill value={points} dark />
-          <LangPill lang={lang} onChange={onLang} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {onProfile && (
+              <button onClick={onProfile} aria-label="Profile" style={{
+                appearance: 'none', cursor: 'pointer',
+                background: 'rgba(255,255,255,0.22)',
+                border: '2px solid rgba(255,255,255,0.55)',
+                borderRadius: 999, width: 36, height: 36,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#FFFBEB',
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                </svg>
+              </button>
+            )}
+            <LangPill lang={lang} onChange={onLang} />
+          </div>
         </div>
         <h1 style={{
           margin: 0, color: '#FFFBEB',

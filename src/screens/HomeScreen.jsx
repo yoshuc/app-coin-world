@@ -269,7 +269,7 @@ function AddChildModal({ lang, onAdd, onClose }) {
   )
 }
 
-export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, goLearn, todayEarned, allChildren = [], activeChild, switchChild, addChild }) {
+export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, goLearn, todayEarned, allChildren = [], activeChild, switchChild, addChild, onProfile }) {
   const [showAddChild, setShowAddChild] = useState(false)
   const unlockedCount = unlocked.length
   const total = BUILDINGS.length
@@ -293,6 +293,7 @@ export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, 
         color={COLORS.red} lang={lang} onLang={setLang} points={points}
         titleEs="Mi Pueblo" titleEn="My Town"
         subtitle={`${t(lang, 'level')} ${Math.min(1 + Math.floor(unlockedCount / 2), 9)} · ${unlockedCount}/${total} ${t(lang, 'buildings')} ${t(lang, 'unlocked')}`}
+        onProfile={onProfile}
       />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px 140px' }}>
