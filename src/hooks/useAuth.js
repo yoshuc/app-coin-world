@@ -6,6 +6,7 @@ export function useAuth() {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [child, setChild] = useState(null)
+  const [allChildren, setAllChildren] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export function useAuth() {
         setUser(null)
         setProfile(null)
         setChild(null)
+        setAllChildren([])
         setLoading(false)
       }
     })
@@ -50,8 +52,9 @@ export function useAuth() {
           .select('*')
           .eq('tutor_id', userId)
           .order('created_at', { ascending: true })
-          .limit(1)
-        setChild(children?.[0] ?? null)
+        const list = children || []
+        setAllChildren(list)
+        setChild(list[0] ?? null)
       }
     } catch (err) {
       console.error('Failed to load profile', err)
@@ -90,11 +93,21 @@ export function useAuth() {
       last_name,
       dob,
       gender,
+      points: 0,
     }).select().single()
     if (error) throw error
+    setAllChildren(prev => [...prev, data])
     setChild(data)
     return data
   }, [user])
+
+  const switchChild = useCallback((childId) => {
+    setAllChildren(prev => {
+      const found = prev.find(c => c.id === childId)
+      if (found) setChild(found)
+      return prev
+    })
+  }, [])
 
   const updateChildPoints = useCallback(async (points) => {
     if (!child) return
@@ -105,6 +118,7 @@ export function useAuth() {
       .eq('id', child.id)
     if (!error) {
       setChild((prev) => ({ ...prev, points: newPoints }))
+      setAllChildren(prev => prev.map(c => c.id === child.id ? { ...c, points: newPoints } : c))
     }
   }, [child])
 
@@ -150,11 +164,13 @@ export function useAuth() {
     user,
     profile,
     child,
+    allChildren,
     loading,
     signUp,
     signIn,
     signOut,
     addChild,
+    switchChild,
     updateChildPoints,
     unlockBuilding,
     saveProgress,

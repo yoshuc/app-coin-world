@@ -114,6 +114,10 @@ function AppShell({ lang, setLang, auth }) {
             unlocked={unlocked} todayEarned={todayEarned}
             goMarket={() => setTab('market')}
             goLearn={() => setTab('learn')}
+            allChildren={auth.allChildren}
+            activeChild={auth.child}
+            switchChild={auth.switchChild}
+            addChild={auth.addChild}
           />
         )}
         {tab === 'market' && (
