@@ -1,7 +1,7 @@
 import CoinPill from './CoinPill.jsx'
 import LangPill from './LangPill.jsx'
 
-export default function ScreenHeader({ color, lang, onLang, points, titleEs, titleEn, subtitle, onProfile }) {
+export default function ScreenHeader({ color, lang, onLang, points, titleEs, titleEn, subtitle, onProfile, childName, childEmoji }) {
   return (
     <div style={{ position: 'relative' }}>
       <div style={{
@@ -10,7 +10,21 @@ export default function ScreenHeader({ color, lang, onLang, points, titleEs, tit
         boxShadow: 'inset 0 -6px 0 rgba(0,0,0,0.12)',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <CoinPill value={points} dark />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <CoinPill value={points} dark />
+            {childName && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                background: 'rgba(255,255,255,0.22)',
+                border: '2px solid rgba(255,255,255,0.45)',
+                borderRadius: 999, padding: '3px 10px',
+                fontFamily: 'Fredoka', fontWeight: 700, fontSize: 13, color: '#FFFBEB',
+              }}>
+                <span style={{ fontSize: 16 }}>{childEmoji || '⭐'}</span>
+                {childName}
+              </div>
+            )}
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {onProfile && (
               <button onClick={onProfile} aria-label="Profile" style={{

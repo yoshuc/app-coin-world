@@ -5,7 +5,55 @@ import { supabase } from '../lib/supabase.js'
 import { t } from '../i18n/strings.js'
 import { COLORS } from '../components/ChunkyButton.jsx'
 
+// Run in Supabase SQL editor:
+// ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_emoji text DEFAULT '👤';
+// ALTER TABLE children ADD COLUMN IF NOT EXISTS avatar_emoji text DEFAULT '⭐';
+
 const KIDS_FONT = "'Fredoka', system-ui, sans-serif"
+
+const ADULT_EMOJIS = ['👤','👩','👨','👩‍💼','👨‍💼','👩‍🏫','👨‍🏫','👩‍💻','👨‍💻','🧑','👵','👴']
+const CHILD_EMOJIS = ['🐶','🐱','🐻','🦊','🐼','🐨','🦁','🐯','🐸','🦄','🌟','⭐','🎈','🚀','🦋','🌈','🎮','⚽','🎨','🎵']
+
+function EmojiPicker({ emojis, current, lang, onSelect, onClose }) {
+  return (
+    <div onClick={e => { if (e.target === e.currentTarget) onClose() }} style={{
+      position: 'fixed', inset: 0, zIndex: 60,
+      background: 'rgba(0,0,0,0.45)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '0 20px',
+    }}>
+      <div style={{
+        background: '#FFFFFF', borderRadius: 20,
+        border: '1px solid #E2E8F0', boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+        padding: '20px', width: '100%', maxWidth: 360,
+      }}>
+        <div style={{ fontFamily: PRO_FONT, fontWeight: 700, fontSize: 16, color: PRO.ink, marginBottom: 14 }}>
+          {lang === 'es' ? 'Elige un avatar' : 'Choose an avatar'}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8 }}>
+          {emojis.map(e => (
+            <button key={e} onClick={() => { onSelect(e); onClose() }} style={{
+              appearance: 'none', cursor: 'pointer', border: 'none',
+              background: e === current ? '#EFF6FF' : 'transparent',
+              borderRadius: 10, fontSize: 28, padding: 6,
+              outline: e === current ? '2px solid #3B82F6' : 'none',
+              transition: 'transform 80ms',
+            }}>
+              {e}
+            </button>
+          ))}
+        </div>
+        <button onClick={onClose} style={{
+          marginTop: 14, width: '100%', appearance: 'none', cursor: 'pointer', height: 40,
+          background: '#F8FAFC', color: '#64748B', border: '1px solid #E2E8F0', borderRadius: 10,
+          fontFamily: PRO_FONT, fontWeight: 600, fontSize: 14,
+        }}>
+          {lang === 'es' ? 'Cancelar' : 'Cancel'}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 function Section({ title, children }) {
   return (
@@ -53,6 +101,8 @@ function ChildRow({ child, lang, onUpdated }) {
   })
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
+  const [avatarEmoji, setAvatarEmoji] = useState(child.avatar_emoji || (child.gender === 'M' ? '🐶' : '🌟'))
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false)
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })) }
 
@@ -73,20 +123,39 @@ function ChildRow({ child, lang, onUpdated }) {
     setEditing(false)
   }
 
+  async function handleChildEmojiSelect(emoji) {
+    setAvatarEmoji(emoji)
+    await supabase.from('children').update({ avatar_emoji: emoji }).eq('id', child.id)
+    onUpdated({ ...child, avatar_emoji: emoji })
+  }
+
   if (!editing) {
     return (
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '10px 0', borderBottom: `1px solid ${PRO.border}`,
       }}>
-        <div style={{
-          width: 38, height: 38, borderRadius: 999,
-          background: child.gender === 'M' ? '#DBEAFE' : '#FAE8FF',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 20, flexShrink: 0,
-        }}>
-          {child.gender === 'M' ? '👦' : '👧'}
+        <div
+          onClick={() => setShowAvatarPicker(true)}
+          style={{
+            width: 38, height: 38, borderRadius: 999,
+            background: child.gender === 'M' ? '#DBEAFE' : '#FAE8FF',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 20, flexShrink: 0, cursor: 'pointer',
+            border: '2px solid transparent',
+            transition: 'border-color 120ms',
+          }}>
+          {avatarEmoji}
         </div>
+        {showAvatarPicker && (
+          <EmojiPicker
+            emojis={CHILD_EMOJIS}
+            current={avatarEmoji}
+            lang={lang}
+            onSelect={handleChildEmojiSelect}
+            onClose={() => setShowAvatarPicker(false)}
+          />
+        )}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: PRO_FONT, fontWeight: 700, fontSize: 15, color: PRO.ink }}>
             {child.first_name} {child.last_name}
@@ -270,6 +339,8 @@ export default function ProfileScreen({ lang, auth, onClose }) {
   const [resendStatus, setResendStatus] = useState('')
   const [showAddChild, setShowAddChild] = useState(false)
   const [confirmSignOut, setConfirmSignOut] = useState(false)
+  const [avatarEmoji, setAvatarEmoji] = useState(profile?.avatar_emoji || '👤')
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false)
 
   const emailVerified = !!user?.email_confirmed_at
 
@@ -284,6 +355,11 @@ export default function ProfileScreen({ lang, auth, onClose }) {
     setSavingProfile(false)
     if (error) { setProfileErr(error.message); return }
     setEditingProfile(false)
+  }
+
+  async function handleAvatarSelect(emoji) {
+    setAvatarEmoji(emoji)
+    await supabase.from('users').update({ avatar_emoji: emoji }).eq('id', user.id)
   }
 
   async function resendVerification() {
@@ -336,12 +412,37 @@ export default function ProfileScreen({ lang, auth, onClose }) {
           {!editingProfile ? (
             <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontFamily: PRO_FONT, fontWeight: 700, fontSize: 18, color: PRO.ink }}>
-                    {profile?.first_name} {profile?.last_name}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                    <div
+                      onClick={() => setShowAvatarPicker(true)}
+                      style={{
+                        width: 52, height: 52, borderRadius: 999,
+                        background: '#EFF6FF', border: '2px solid #BFDBFE',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 28, cursor: 'pointer',
+                      }}>
+                      {avatarEmoji}
+                    </div>
+                    <div
+                      onClick={() => setShowAvatarPicker(true)}
+                      style={{
+                        position: 'absolute', bottom: -4, right: -4,
+                        width: 20, height: 20, borderRadius: 999,
+                        background: '#FFFFFF', border: '1.5px solid #E2E8F0',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 11, cursor: 'pointer',
+                      }}>
+                      ✏️
+                    </div>
                   </div>
-                  <div style={{ fontFamily: PRO_FONT, fontWeight: 500, fontSize: 14, color: PRO.mute, marginTop: 2 }}>
-                    {user?.email}
+                  <div>
+                    <div style={{ fontFamily: PRO_FONT, fontWeight: 700, fontSize: 18, color: PRO.ink }}>
+                      {profile?.first_name} {profile?.last_name}
+                    </div>
+                    <div style={{ fontFamily: PRO_FONT, fontWeight: 500, fontSize: 14, color: PRO.mute, marginTop: 2 }}>
+                      {user?.email}
+                    </div>
                   </div>
                 </div>
                 <button onClick={() => setEditingProfile(true)} style={{
@@ -352,6 +453,15 @@ export default function ProfileScreen({ lang, auth, onClose }) {
                   {lang === 'es' ? 'Editar' : 'Edit'}
                 </button>
               </div>
+              {showAvatarPicker && (
+                <EmojiPicker
+                  emojis={ADULT_EMOJIS}
+                  current={avatarEmoji}
+                  lang={lang}
+                  onSelect={handleAvatarSelect}
+                  onClose={() => setShowAvatarPicker(false)}
+                />
+              )}
             </>
           ) : (
             <>

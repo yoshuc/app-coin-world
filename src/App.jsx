@@ -43,6 +43,10 @@ function AppShell({ lang, setLang, auth }) {
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showGate, setShowGate] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
+  const [completedLessonIds, setCompletedLessonIds] = useState(new Set())
+
+  const childName = auth.child?.first_name
+  const childEmoji = auth.child?.avatar_emoji || '⭐'
 
   useEffect(() => {
     // Session count
@@ -68,10 +72,24 @@ function AppShell({ lang, setLang, auth }) {
     })
   }, [auth.child])
 
+  useEffect(() => {
+    if (!auth.child || !auth.loadDailyPoints) return
+    auth.loadDailyPoints().then(pts => setTodayEarned(pts))
+  }, [auth.child, auth.loadDailyPoints])
+
+  useEffect(() => {
+    if (!auth.child || !auth.loadProgress) return
+    auth.loadProgress().then(progress => {
+      const ids = new Set((progress || []).filter(p => p.completed).map(p => p.lesson_id))
+      setCompletedLessonIds(ids)
+    })
+  }, [auth.child, auth.loadProgress])
+
   function awardEarn(n) {
     const newPoints = points + n
     setPoints(newPoints)
-    setTodayEarned(e => e + n)
+    const newToday = todayEarned + n
+    setTodayEarned(newToday)
 
     const next = BUILDINGS.find(b => !unlocked.includes(b.id))
     if (next && newPoints >= next.cost) {
@@ -79,6 +97,9 @@ function AppShell({ lang, setLang, auth }) {
       auth.unlockBuilding(next.id)
     }
     auth.updateChildPoints(n)
+    if (auth.saveDailyPoints) {
+      auth.saveDailyPoints(newToday)
+    }
   }
 
   return (
@@ -124,18 +145,27 @@ function AppShell({ lang, setLang, auth }) {
             switchChild={auth.switchChild}
             addChild={auth.addChild}
             onProfile={() => setShowGate(true)}
+            childName={childName}
+            childEmoji={childEmoji}
           />
         )}
         {tab === 'market' && (
           <MarketScreen
             lang={lang} setLang={setLang} points={points}
             setPoints={setPoints}
+            completedLessonIds={completedLessonIds}
+            onProfile={() => setShowGate(true)}
+            childName={childName}
+            childEmoji={childEmoji}
           />
         )}
         {tab === 'learn' && (
           <LessonScreen
             lang={lang} setLang={setLang} points={points}
             setPoints={setPoints} awardEarn={awardEarn} auth={auth}
+            onProfile={() => setShowGate(true)}
+            childName={childName}
+            childEmoji={childEmoji}
           />
         )}
       </div>

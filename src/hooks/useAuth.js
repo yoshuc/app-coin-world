@@ -159,6 +159,45 @@ export function useAuth() {
     return data?.map((r) => r.building_id) || []
   }, [child])
 
+  // daily_points table (run once in Supabase SQL editor):
+  // CREATE TABLE daily_points (
+  //   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  //   child_id uuid REFERENCES children(id) ON DELETE CASCADE,
+  //   date date NOT NULL,
+  //   points int DEFAULT 0,
+  //   timezone text,
+  //   created_at timestamptz DEFAULT now(),
+  //   UNIQUE(child_id, date)
+  // );
+  // ALTER TABLE daily_points ENABLE ROW LEVEL SECURITY;
+  // CREATE POLICY "daily_points_select" ON daily_points FOR SELECT USING (child_id IN (SELECT id FROM children WHERE tutor_id = auth.uid()));
+  // CREATE POLICY "daily_points_insert" ON daily_points FOR INSERT WITH CHECK (child_id IN (SELECT id FROM children WHERE tutor_id = auth.uid()));
+  // CREATE POLICY "daily_points_update" ON daily_points FOR UPDATE USING (child_id IN (SELECT id FROM children WHERE tutor_id = auth.uid()));
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+
+  const loadDailyPoints = useCallback(async () => {
+    if (!child) return 0
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: timezone })
+    const { data } = await supabase
+      .from('daily_points')
+      .select('points')
+      .eq('child_id', child.id)
+      .eq('date', today)
+      .single()
+    return data?.points ?? 0
+  }, [child])
+
+  const saveDailyPoints = useCallback(async (points) => {
+    if (!child) return
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: timezone })
+    await supabase.from('daily_points').upsert({
+      child_id: child.id,
+      date: today,
+      points,
+      timezone,
+    }, { onConflict: 'child_id,date' })
+  }, [child])
+
   return {
     session,
     user,
@@ -176,5 +215,7 @@ export function useAuth() {
     saveProgress,
     loadProgress,
     loadUnlockedBuildings,
+    loadDailyPoints,
+    saveDailyPoints,
   }
 }
