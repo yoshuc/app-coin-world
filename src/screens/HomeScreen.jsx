@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import ScreenHeader from '../components/ScreenHeader.jsx'
 import ChunkyButton, { COLORS } from '../components/ChunkyButton.jsx'
 import { Building, Moneda } from '../components/Art.jsx'
@@ -53,7 +53,7 @@ function EmailBanner({ lang }) {
   )
 }
 
-function ChildSwitcher({ allChildren, activeChild, switchChild, lang, onAddChild }) {
+function ChildSwitcher({ allChildren, activeChild, switchChild }) {
   return (
     <div style={{
       padding: '8px 16px 0',
@@ -77,200 +77,11 @@ function ChildSwitcher({ allChildren, activeChild, switchChild, lang, onAddChild
           </button>
         )
       })}
-      <button onClick={onAddChild} style={{
-        appearance: 'none', cursor: 'pointer',
-        background: COLORS.yellow,
-        color: COLORS.ink,
-        border: `2.5px solid ${COLORS.ink}`,
-        borderRadius: 999, padding: '4px 10px',
-        fontFamily: KIDS_FONT, fontWeight: 700, fontSize: 14,
-        boxShadow: `0 2px 0 rgba(31,17,8,0.35)`,
-        display: 'inline-flex', alignItems: 'center', gap: 4,
-      }}>
-        <span style={{ fontSize: 16, lineHeight: 1 }}>+</span>
-        {lang === 'es' ? 'Añadir' : 'Add'}
-      </button>
     </div>
   )
 }
 
-function AddChildModal({ lang, onAdd, onClose }) {
-  const [form, setForm] = useState({ firstName: '', lastName: '', dob: '', gender: '' })
-  const [submitted, setSubmitted] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  function set(k, v) { setForm(f => ({ ...f, [k]: v })) }
-
-  const errors = useMemo(() => {
-    const e = {}
-    if (!form.firstName.trim()) e.firstName = lang === 'es' ? 'Requerido' : 'Required'
-    if (!form.lastName.trim()) e.lastName = lang === 'es' ? 'Requerido' : 'Required'
-    if (!form.dob) e.dob = lang === 'es' ? 'Requerido' : 'Required'
-    if (!form.gender) e.gender = lang === 'es' ? 'Selecciona una opción' : 'Select an option'
-    return e
-  }, [form, lang])
-
-  async function submit(e) {
-    e?.preventDefault()
-    setSubmitted(true)
-    if (Object.keys(errors).length > 0) return
-    setLoading(true)
-    setError('')
-    try {
-      await onAdd({
-        first_name: form.firstName,
-        last_name: form.lastName,
-        dob: form.dob,
-        gender: form.gender,
-      })
-      onClose()
-    } catch (err) {
-      setError(err.message || (lang === 'es' ? 'Algo salió mal.' : 'Something went wrong.'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const inputStyle = (hasErr) => ({
-    width: '100%', appearance: 'none', outline: 'none',
-    border: `3px solid ${hasErr ? COLORS.red : COLORS.ink}`,
-    borderRadius: 14, padding: '11px 14px',
-    fontFamily: KIDS_FONT, fontSize: 16, fontWeight: 600, color: COLORS.ink,
-    background: '#FFFFFF',
-    boxShadow: hasErr ? `0 3px 0 ${COLORS.red}` : `0 3px 0 ${COLORS.ink}`,
-    boxSizing: 'border-box',
-  })
-
-  const label = (txt) => (
-    <span style={{ display: 'block', fontFamily: KIDS_FONT, fontWeight: 700, fontSize: 14, color: COLORS.ink, marginBottom: 5 }}>
-      {txt}
-    </span>
-  )
-
-  const errMsg = (key) => submitted && errors[key]
-    ? <span style={{ display: 'block', marginTop: 3, fontFamily: KIDS_FONT, fontSize: 12, color: COLORS.red, fontWeight: 700 }}>{errors[key]}</span>
-    : null
-
-  return (
-    <div
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 40,
-        background: 'rgba(31,17,8,0.55)',
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-      }}
-    >
-      <div style={{
-        width: '100%', maxWidth: 430,
-        background: '#FFFBEB',
-        borderTopLeftRadius: 28, borderTopRightRadius: 28,
-        border: `3px solid ${COLORS.ink}`, borderBottom: 'none',
-        boxShadow: '0 -6px 0 rgba(0,0,0,0.12)',
-        padding: '20px 18px 36px',
-        maxHeight: '90dvh', overflowY: 'auto',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-          <Moneda size={56} mood="cheer" wave />
-          <div>
-            <div style={{ fontFamily: KIDS_FONT, fontWeight: 800, fontSize: 22, color: COLORS.ink, lineHeight: 1.1 }}>
-              {lang === 'es' ? '¿Quién más aprende?' : 'Who else is learning?'}
-            </div>
-            <div style={{ fontFamily: KIDS_FONT, fontWeight: 600, fontSize: 13, color: COLORS.ink, opacity: 0.65, marginTop: 2 }}>
-              {lang === 'es' ? 'Agrega otro niño o niña' : 'Add another child'}
-            </div>
-          </div>
-          <button onClick={onClose} aria-label="close" style={{
-            marginLeft: 'auto', appearance: 'none', border: 'none',
-            background: 'rgba(0,0,0,0.08)', borderRadius: 999,
-            width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', color: COLORS.ink, flexShrink: 0,
-          }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {error && (
-          <div style={{
-            background: '#FEE2E2', border: `2px solid ${COLORS.red}`, borderRadius: 12,
-            padding: '9px 12px', marginBottom: 12,
-            fontFamily: KIDS_FONT, fontSize: 13, color: COLORS.red, fontWeight: 700,
-          }}>{error}</div>
-        )}
-
-        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              {label(lang === 'es' ? 'Nombre' : 'First name')}
-              <input
-                value={form.firstName} onChange={e => set('firstName', e.target.value)}
-                placeholder={lang === 'es' ? 'Lucía' : 'Lucy'}
-                autoComplete="given-name"
-                style={inputStyle(submitted && errors.firstName)}
-              />
-              {errMsg('firstName')}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              {label(lang === 'es' ? 'Apellido' : 'Last name')}
-              <input
-                value={form.lastName} onChange={e => set('lastName', e.target.value)}
-                placeholder={lang === 'es' ? 'García' : 'Garcia'}
-                autoComplete="family-name"
-                style={inputStyle(submitted && errors.lastName)}
-              />
-              {errMsg('lastName')}
-            </div>
-          </div>
-
-          <div>
-            {label(lang === 'es' ? 'Fecha de nacimiento' : 'Date of birth')}
-            <input
-              type="date" value={form.dob} onChange={e => set('dob', e.target.value)}
-              style={inputStyle(submitted && errors.dob)}
-            />
-            {errMsg('dob')}
-          </div>
-
-          <div>
-            {label(lang === 'es' ? 'Género' : 'Gender')}
-            <div style={{ display: 'flex', gap: 10 }}>
-              {[['M', '👦', lang === 'es' ? 'Niño' : 'Boy'], ['F', '👧', lang === 'es' ? 'Niña' : 'Girl']].map(([val, emoji, txt]) => {
-                const sel = form.gender === val
-                const color = val === 'M' ? COLORS.blue : COLORS.purple
-                return (
-                  <button key={val} type="button" onClick={() => set('gender', val)} style={{
-                    flex: 1, appearance: 'none', cursor: 'pointer',
-                    background: sel ? color : '#FFFFFF',
-                    color: sel ? '#FFFBEB' : COLORS.ink,
-                    border: `3px solid ${submitted && errors.gender ? COLORS.red : COLORS.ink}`,
-                    borderRadius: 14, height: 52,
-                    fontFamily: KIDS_FONT, fontWeight: 800, fontSize: 16,
-                    boxShadow: sel ? `0 4px 0 ${COLORS.ink}` : `0 3px 0 rgba(31,17,8,0.4)`,
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  }}>
-                    <span style={{ fontSize: 20 }}>{emoji}</span>{txt}
-                  </button>
-                )
-              })}
-            </div>
-            {errMsg('gender')}
-          </div>
-
-          <ChunkyButton color={COLORS.green} fullWidth
-                        style={{ color: '#FFFBEB', marginTop: 4, fontSize: 20 }}
-                        onClick={submit}>
-            {loading ? '...' : `🎉  ${lang === 'es' ? '¡Agregar!' : 'Add child!'}`}
-          </ChunkyButton>
-        </form>
-      </div>
-    </div>
-  )
-}
-
-export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, goLearn, todayEarned, allChildren = [], activeChild, switchChild, addChild, onProfile }) {
-  const [showAddChild, setShowAddChild] = useState(false)
+export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, goLearn, todayEarned, allChildren = [], activeChild, switchChild, onProfile }) {
   const unlockedCount = unlocked.length
   const total = BUILDINGS.length
   const multiChild = allChildren.length > 1
@@ -284,8 +95,6 @@ export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, 
           allChildren={allChildren}
           activeChild={activeChild}
           switchChild={switchChild}
-          lang={lang}
-          onAddChild={() => setShowAddChild(true)}
         />
       )}
 
@@ -316,19 +125,6 @@ export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, 
               color: COLORS.ink, letterSpacing: '-0.02em',
             }}>+{todayEarned} {t(lang, 'points')}</div>
           </div>
-          {!multiChild && addChild && (
-            <button onClick={() => setShowAddChild(true)} style={{
-              appearance: 'none', cursor: 'pointer', flexShrink: 0,
-              background: COLORS.yellow, color: COLORS.ink,
-              border: `2.5px solid ${COLORS.ink}`, borderRadius: 12,
-              padding: '6px 10px', fontFamily: KIDS_FONT, fontWeight: 700, fontSize: 13,
-              boxShadow: `0 2px 0 ${COLORS.ink}`,
-              display: 'flex', alignItems: 'center', gap: 4,
-            }}>
-              <span style={{ fontSize: 18 }}>👨‍👩‍👧‍👦</span>
-              {lang === 'es' ? '+Niño' : '+Child'}
-            </button>
-          )}
         </div>
 
         <div style={{
@@ -371,14 +167,6 @@ export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, 
           📚  {lang === 'es' ? '¡Aprende y gana monedas!' : 'Learn & earn coins!'}
         </button>
       </div>
-
-      {showAddChild && (
-        <AddChildModal
-          lang={lang}
-          onAdd={addChild}
-          onClose={() => setShowAddChild(false)}
-        />
-      )}
     </div>
   )
 }

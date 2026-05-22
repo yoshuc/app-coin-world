@@ -201,7 +201,7 @@ function LessonMap({ lang, progress, onSelect, onLockedMsg }) {
 }
 
 // ─── Active Lesson (View B) ───────────────────────────────────────────────────
-function ActiveLesson({ lesson, lang, awardEarn, auth, onBack }) {
+function ActiveLesson({ lesson, lang, awardEarn, onLessonComplete, onBack }) {
   const questions = lesson.questions
   const [qIdx, setQIdx] = useState(0)
   const [selected, setSelected] = useState(null)
@@ -226,22 +226,16 @@ function ActiveLesson({ lesson, lang, awardEarn, auth, onBack }) {
       setTotalScore(newScore)
       setShowReward(true)
       awardEarn(q.coinsIfCorrect)
-      if (auth?.saveProgress) {
-        auth.saveProgress(lesson.id, newScore)
-      }
       setTimeout(() => {
         setShowReward(false)
-        // advance
         if (qIdx + 1 < questions.length) {
           setQIdx(i => i + 1)
           setSelected(null)
           setWrongCount(0)
         } else {
-          // lesson complete
+          const finalScore = newScore + lesson.coinReward
           awardEarn(lesson.coinReward)
-          if (auth?.saveProgress) {
-            auth.saveProgress(lesson.id, newScore + lesson.coinReward)
-          }
+          onLessonComplete(lesson.id, finalScore)
           setDone(true)
         }
       }, 400)
@@ -385,16 +379,38 @@ function ActiveLesson({ lesson, lang, awardEarn, auth, onBack }) {
 }
 
 // ─── Main LessonScreen ────────────────────────────────────────────────────────
+// NOTE: the progress table requires a unique constraint on (child_id, lesson_id)
+// for upsert to work. Run once in Supabase SQL editor if not already applied:
+//   ALTER TABLE progress ADD CONSTRAINT progress_child_lesson_unique UNIQUE (child_id, lesson_id);
 export default function LessonScreen({ lang, setLang, points, setPoints, awardEarn, auth }) {
   const [activeLesson, setActiveLesson] = useState(null)
   const [lockedMsg, setLockedMsg] = useState(null)
   const [progress, setProgress] = useState([])
+  const [progressLoading, setProgressLoading] = useState(true)
 
+  // Depend on auth.loadProgress (stable useCallback ref) instead of the whole auth
+  // object, which is a new reference on every parent render. This effect re-runs
+  // when the active child changes (loadProgress gets a new ref when child changes).
   useEffect(() => {
-    if (auth?.loadProgress) {
-      auth.loadProgress().then(p => setProgress(p || []))
+    if (!auth.loadProgress) return
+    setProgressLoading(true)
+    auth.loadProgress().then(p => {
+      setProgress(p || [])
+      setProgressLoading(false)
+    })
+  }, [auth.loadProgress])
+
+  async function handleLessonComplete(lessonId, score) {
+    if (auth?.saveProgress) {
+      await auth.saveProgress(lessonId, score)
     }
-  }, [auth])
+    // Update local state immediately so the map reflects the new completion
+    // without a round-trip fetch.
+    setProgress(prev => {
+      const filtered = prev.filter(p => p.lesson_id !== lessonId)
+      return [...filtered, { lesson_id: lessonId, completed: true, score }]
+    })
+  }
 
   function handleLockedMsg(msg) {
     setLockedMsg(msg)
@@ -411,32 +427,43 @@ export default function LessonScreen({ lang, setLang, points, setPoints, awardEa
             color={COLORS.purple} lang={lang} onLang={setLang} points={points}
             titleEs="Aprender" titleEn="Learn"
           />
-          <LessonMap
-            lang={lang}
-            progress={progress}
-            onSelect={lesson => setActiveLesson(lesson)}
-            onLockedMsg={handleLockedMsg}
-          />
+
+          {progressLoading ? (
+            <div style={{
+              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Moneda size={72} mood="think" />
+            </div>
+          ) : (
+            <LessonMap
+              lang={lang}
+              progress={progress}
+              onSelect={lesson => setActiveLesson(lesson)}
+              onLockedMsg={handleLockedMsg}
+            />
+          )}
 
           {/* Moneda with locked message */}
-          <div style={{
-            position: 'absolute', bottom: 80, left: 0, right: 0,
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            pointerEvents: 'none', zIndex: 5,
-          }}>
-            {lockedMsg && (
-              <div style={{
-                background: '#FFFBEB', border: `3px solid ${COLORS.ink}`,
-                borderRadius: 14, padding: '8px 14px', marginBottom: 8,
-                fontFamily: FONT, fontWeight: 600, fontSize: 14, color: COLORS.ink,
-                maxWidth: 200, textAlign: 'center',
-                boxShadow: `0 3px 0 ${COLORS.ink}`,
-              }}>
-                🔒 {lang === 'es' ? 'Completa las lecciones anteriores primero' : 'Complete previous lessons first'}
-              </div>
-            )}
-            <Moneda size={64} mood={lockedMsg ? 'sad' : 'cheer'} wave={!lockedMsg} />
-          </div>
+          {!progressLoading && (
+            <div style={{
+              position: 'absolute', bottom: 80, left: 0, right: 0,
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              pointerEvents: 'none', zIndex: 5,
+            }}>
+              {lockedMsg && (
+                <div style={{
+                  background: '#FFFBEB', border: `3px solid ${COLORS.ink}`,
+                  borderRadius: 14, padding: '8px 14px', marginBottom: 8,
+                  fontFamily: FONT, fontWeight: 600, fontSize: 14, color: COLORS.ink,
+                  maxWidth: 200, textAlign: 'center',
+                  boxShadow: `0 3px 0 ${COLORS.ink}`,
+                }}>
+                  🔒 {lang === 'es' ? 'Completa las lecciones anteriores primero' : 'Complete previous lessons first'}
+                </div>
+              )}
+              <Moneda size={64} mood={lockedMsg ? 'sad' : 'cheer'} wave={!lockedMsg} />
+            </div>
+          )}
         </>
       ) : (
         <>
@@ -475,14 +502,8 @@ export default function LessonScreen({ lang, setLang, points, setPoints, awardEa
             lesson={activeLesson}
             lang={lang}
             awardEarn={awardEarn}
-            auth={auth}
-            onBack={() => {
-              setActiveLesson(null)
-              // reload progress
-              if (auth?.loadProgress) {
-                auth.loadProgress().then(p => setProgress(p || []))
-              }
-            }}
+            onLessonComplete={handleLessonComplete}
+            onBack={() => setActiveLesson(null)}
           />
         </>
       )}
