@@ -587,6 +587,7 @@ export default function LessonScreen({ lang, setLang, points, setPoints, awardEa
             </div>
           </div>
           <ActiveLesson
+            key={activeLesson.id}
             lesson={activeLesson}
             lang={lang}
             awardEarn={awardEarn}
