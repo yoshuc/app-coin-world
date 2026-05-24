@@ -1,8 +1,8 @@
 import { useState, useRef } from 'react'
 import ScreenHeader from '../components/ScreenHeader.jsx'
 import ChunkyButton, { COLORS } from '../components/ChunkyButton.jsx'
-import { MarketItem, Moneda, CoinIcon } from '../components/Art.jsx'
-import { ITEMS } from '../constants/items.js'
+import { Moneda, CoinIcon } from '../components/Art.jsx'
+import { MARKET_ITEMS, UNIT_LESSON_RANGES } from '../data/marketItems.js'
 import { STRINGS, t } from '../i18n/strings.js'
 
 function SpeechBubble({ children, small }) {
@@ -51,18 +51,92 @@ function MonedaTip({ visible, lang, onClose }) {
   )
 }
 
-function getCompletedUnits(completedLessonIds) {
-  let count = 0
-  for (let unit = 1; unit <= 4; unit++) {
-    const start = (unit - 1) * 5 + 1
-    const end = unit * 5
-    let unitDone = true
-    for (let id = start; id <= end; id++) {
-      if (!completedLessonIds?.has(id)) { unitDone = false; break }
-    }
-    if (unitDone) count++
+function isUnitUnlocked(unitKey, completedLessonIds) {
+  if (unitKey === 'unit1') return true
+  const lessons = UNIT_LESSON_RANGES[unitKey] || []
+  return lessons.every(id => completedLessonIds?.has(id))
+}
+
+const UNIT_LABELS = {
+  unit1: { es: 'Unidad 1 · Siempre disponible', en: 'Unit 1 · Always available' },
+  unit2: { es: 'Unidad 2 · Completa las lecciones 6–10', en: 'Unit 2 · Complete lessons 6–10' },
+  unit3: { es: 'Unidad 3 · Completa las lecciones 11–15', en: 'Unit 3 · Complete lessons 11–15' },
+  unit4: { es: 'Unidad 4 · Completa las lecciones 16–20', en: 'Unit 4 · Complete lessons 16–20' },
+}
+
+function ItemCard({ item, lang, points, unlocked, onBuy, onSave }) {
+  if (!unlocked) {
+    const unitNum = Object.entries(UNIT_LESSON_RANGES).find(([, ids]) => ids.includes(item.unlockLesson ?? 0))?.[0]?.replace('unit', '') ?? ''
+    return (
+      <div style={{
+        background: '#FAFAFA', borderRadius: 18,
+        border: '3px dashed #9CA3AF',
+        padding: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+      }}>
+        <div style={{
+          width: '100%', aspectRatio: '1 / 1', background: '#F3F4F6',
+          borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          position: 'relative',
+        }}>
+          <span style={{ fontSize: 48, filter: 'grayscale(1) opacity(0.4)' }}>{item.emoji}</span>
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: 12,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span style={{ fontSize: 28 }}>🔒</span>
+          </div>
+        </div>
+        <div style={{ fontFamily: 'Fredoka', fontWeight: 700, fontSize: 14, color: '#9CA3AF', textAlign: 'center' }}>
+          {lang === 'es' ? item.es : item.en}
+        </div>
+        <div style={{
+          width: '100%', height: 40, borderRadius: 12, background: '#F3F4F6',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: 'Fredoka', fontWeight: 700, fontSize: 12, color: '#9CA3AF',
+          border: '2px solid #E5E7EB', textAlign: 'center',
+        }}>
+          {lang === 'es' ? `Completa la Unidad ${unitNum}` : `Complete Unit ${unitNum}`}
+        </div>
+      </div>
+    )
   }
-  return count
+
+  return (
+    <div style={{
+      background: '#FFFFFF', borderRadius: 18,
+      border: `3px solid ${COLORS.ink}`,
+      boxShadow: `0 4px 0 ${COLORS.ink}`,
+      padding: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+    }}>
+      <div style={{
+        width: '100%', aspectRatio: '1 / 1', background: '#FEF3C7',
+        borderRadius: 12, border: `2px solid ${COLORS.ink}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        position: 'relative',
+      }}>
+        <span style={{ fontSize: 48 }}>{item.emoji}</span>
+        <div style={{
+          position: 'absolute', top: -8, right: -8,
+          background: COLORS.yellow, color: COLORS.ink,
+          border: `2px solid ${COLORS.ink}`, borderRadius: 999,
+          padding: '2px 8px', fontFamily: 'Fredoka', fontWeight: 800, fontSize: 14,
+          display: 'flex', alignItems: 'center', gap: 3,
+          boxShadow: `0 2px 0 ${COLORS.ink}`,
+        }}>
+          <CoinIcon size={14} />{item.cost}
+        </div>
+      </div>
+      <div style={{ fontFamily: 'Fredoka', fontWeight: 700, fontSize: 14, color: COLORS.ink, textAlign: 'center' }}>
+        {lang === 'es' ? item.es : item.en}
+      </div>
+      <div style={{ display: 'flex', gap: 6, width: '100%' }}>
+        <ChunkyButton small color={COLORS.red} style={{ color: '#FFFBEB', flex: 1, minWidth: 0 }}
+                      onClick={() => onBuy(item)}>{t(lang, 'buy')}</ChunkyButton>
+        <ChunkyButton small color={COLORS.blue} style={{ color: '#FFFBEB', flex: 1, minWidth: 0 }}
+                      onClick={() => onSave(item)}>{t(lang, 'save')}</ChunkyButton>
+      </div>
+    </div>
+  )
 }
 
 export default function MarketScreen({ lang, setLang, points, setPoints, completedLessonIds, onProfile, childName, childEmoji }) {
@@ -77,7 +151,6 @@ export default function MarketScreen({ lang, setLang, points, setPoints, complet
 
   const maxBudget = Math.max(startPoints.current, 50)
   const ratio = Math.max(0, Math.min(1, points / maxBudget))
-  const completedUnits = getCompletedUnits(completedLessonIds)
 
   function react(mood, textEs, textEn, duration = 2400) {
     if (reactionTimer.current) clearTimeout(reactionTimer.current)
@@ -100,6 +173,8 @@ export default function MarketScreen({ lang, setLang, points, setPoints, complet
     react('cheer', STRINGS.marketSave.es, STRINGS.marketSave.en)
     setPoints(p => p + 2)
   }
+
+  const unitKeys = ['unit1', 'unit2', 'unit3', 'unit4']
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
@@ -140,72 +215,38 @@ export default function MarketScreen({ lang, setLang, points, setPoints, complet
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 200px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-          {ITEMS.map(it => {
-            const isLocked = (it.unlocksAtUnit || 0) > completedUnits
-            return (
-              <div key={it.id} style={{
-                background: '#FFFFFF', borderRadius: 18,
-                border: isLocked ? '2px solid #D1D5DB' : `3px solid ${COLORS.ink}`,
-                boxShadow: isLocked ? 'none' : `0 4px 0 ${COLORS.ink}`,
-                padding: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                opacity: isLocked ? 0.65 : 1,
+        {unitKeys.map(unitKey => {
+          const items = MARKET_ITEMS[unitKey]
+          const unlocked = isUnitUnlocked(unitKey, completedLessonIds)
+          const label = lang === 'es' ? UNIT_LABELS[unitKey].es : UNIT_LABELS[unitKey].en
+          return (
+            <div key={unitKey} style={{ marginBottom: 24 }}>
+              <div style={{
+                fontFamily: 'Fredoka', fontWeight: 700, fontSize: 13,
+                color: unlocked ? COLORS.ink : '#9CA3AF',
+                textTransform: 'uppercase', letterSpacing: '0.05em',
+                marginBottom: 10,
+                display: 'flex', alignItems: 'center', gap: 6,
               }}>
-                <div style={{
-                  width: '100%', aspectRatio: '1 / 1', background: '#FEF3C7',
-                  borderRadius: 12, border: `2px solid ${COLORS.ink}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  position: 'relative',
-                }}>
-                  <MarketItem id={it.id} color={it.color} size={86} />
-                  <div style={{
-                    position: 'absolute', top: -8, right: -8,
-                    background: COLORS.yellow, color: COLORS.ink,
-                    border: `2px solid ${COLORS.ink}`, borderRadius: 999,
-                    padding: '2px 8px', fontFamily: 'Fredoka', fontWeight: 800, fontSize: 14,
-                    display: 'flex', alignItems: 'center', gap: 3,
-                    boxShadow: `0 2px 0 ${COLORS.ink}`,
-                  }}>
-                    <CoinIcon size={14} />{it.cost}
-                  </div>
-                  {isLocked && (
-                    <div style={{
-                      position: 'absolute', inset: 0, borderRadius: 12,
-                      background: 'rgba(0,0,0,0.45)',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      gap: 4,
-                    }}>
-                      <span style={{ fontSize: 22 }}>🔒</span>
-                      <span style={{ fontFamily: 'Fredoka', fontWeight: 700, fontSize: 11, color: '#FFFBEB', textAlign: 'center', padding: '0 4px' }}>
-                        {lang === 'es' ? `Completa Unidad ${it.unlocksAtUnit}` : `Complete Unit ${it.unlocksAtUnit}`}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div style={{ fontFamily: 'Fredoka', fontWeight: 700, fontSize: 14, color: COLORS.ink, textAlign: 'center' }}>
-                  {lang === 'es' ? it.es : it.en}
-                </div>
-                {isLocked ? (
-                  <div style={{
-                    width: '100%', height: 40, borderRadius: 12, background: '#F3F4F6',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontFamily: 'Fredoka', fontWeight: 700, fontSize: 13, color: '#9CA3AF',
-                    border: '2px solid #E5E7EB',
-                  }}>
-                    🔒 {lang === 'es' ? `Completa Unidad ${it.unlocksAtUnit}` : `Complete Unit ${it.unlocksAtUnit}`}
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', gap: 6, width: '100%' }}>
-                    <ChunkyButton small color={COLORS.red} style={{ color: '#FFFBEB', flex: 1, minWidth: 0 }}
-                                  onClick={() => handleBuy(it)}>{t(lang, 'buy')}</ChunkyButton>
-                    <ChunkyButton small color={COLORS.blue} style={{ color: '#FFFBEB', flex: 1, minWidth: 0 }}
-                                  onClick={() => handleSave(it)}>{t(lang, 'save')}</ChunkyButton>
-                  </div>
-                )}
+                {!unlocked && <span>🔒</span>}
+                {label}
               </div>
-            )
-          })}
-        </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                {items.map(item => (
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    lang={lang}
+                    points={points}
+                    unlocked={unlocked}
+                    onBuy={handleBuy}
+                    onSave={handleSave}
+                  />
+                ))}
+              </div>
+            </div>
+          )
+        })}
       </div>
 
       <div style={{

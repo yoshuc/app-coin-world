@@ -4,6 +4,7 @@ import ChunkyButton, { COLORS } from '../components/ChunkyButton.jsx'
 import { Building, Moneda } from '../components/Art.jsx'
 import { BUILDINGS } from '../constants/buildings.js'
 import { BUILDING_NPCS } from '../constants/buildingNPCs.js'
+import { TOWN_NPCS } from '../data/townNPCs.jsx'
 import { t } from '../i18n/strings.js'
 import { supabase } from '../lib/supabase.js'
 
@@ -109,6 +110,67 @@ function ChildSwitcher({ allChildren, activeChild, switchChild }) {
   )
 }
 
+function NPCModal({ buildingId, tipIndex, lang, onClose }) {
+  const npc = TOWN_NPCS[buildingId]
+  if (!npc) return null
+  const Avatar = npc.Avatar
+  const tip = lang === 'es' ? npc.tipsEs[tipIndex] : npc.tipsEn[tipIndex]
+  const label = lang === 'es' ? npc.buildingLabel.es : npc.buildingLabel.en
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'absolute', inset: 0, zIndex: 30,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(0,0,0,0.38)', padding: '0 24px',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#FFFFFF', border: `3px solid ${COLORS.ink}`,
+          boxShadow: `0 6px 0 ${COLORS.ink}`, borderRadius: 22,
+          padding: '22px 20px', width: '100%', maxWidth: 300,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+        }}
+      >
+        <div style={{
+          width: 88, height: 88, borderRadius: '50%',
+          border: `3px solid ${COLORS.ink}`, overflow: 'hidden',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: '#FEF3C7', flexShrink: 0,
+        }}>
+          <Avatar />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+          <div style={{ fontFamily: KIDS_FONT, fontWeight: 800, fontSize: 20, color: COLORS.ink }}>
+            {npc.name}
+          </div>
+          <div style={{
+            background: npc.buildingColor, color: '#FFFBEB',
+            borderRadius: 999, padding: '3px 12px',
+            fontFamily: KIDS_FONT, fontWeight: 700, fontSize: 11,
+            textTransform: 'uppercase', letterSpacing: '0.05em',
+            border: `2px solid ${COLORS.ink}`,
+          }}>{label}</div>
+        </div>
+        <div style={{
+          background: '#FEF3C7', border: `3px solid ${COLORS.ink}`,
+          borderRadius: 14, padding: '12px 16px',
+          fontFamily: KIDS_FONT, fontWeight: 600, fontSize: 15, color: COLORS.ink,
+          textAlign: 'center', lineHeight: 1.3,
+          boxShadow: `0 3px 0 ${COLORS.ink}`, width: '100%',
+        }}>
+          {tip}
+        </div>
+        <div style={{ fontFamily: KIDS_FONT, fontWeight: 600, fontSize: 12, color: '#9CA3AF' }}>
+          {lang === 'es' ? 'Toca para cerrar' : 'Tap to close'}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, goLearn, todayEarned, allChildren = [], activeChild, switchChild, onProfile, childName, childEmoji }) {
   const unlockedCount = unlocked.length
   const total = BUILDINGS.length
@@ -120,6 +182,7 @@ export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, 
   const [lockedShake, setLockedShake] = useState(null)
   const [lockedTip, setLockedTip] = useState(null)
   const [npcBubble, setNpcBubble] = useState(null)
+  const [npcModal, setNpcModal] = useState(null)
 
   function tapBuilding(b) {
     setTappedBuilding(b.id)
@@ -139,11 +202,18 @@ export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, 
 
     playBuildingSound(b.id === 'castle' ? 659 : b.id === 'rocket' ? 587 : 523)
 
-    const npc = BUILDING_NPCS[b.id]
-    if (npc) {
-      const tipIndex = Math.floor(Math.random() * npc.tips[lang].length)
-      setNpcBubble({ buildingId: b.id, tipIndex })
-      setTimeout(() => setNpcBubble(null), 3000)
+    if (TOWN_NPCS[b.id]) {
+      const npc = TOWN_NPCS[b.id]
+      const tipIndex = Math.floor(Math.random() * npc.tipsEs.length)
+      setNpcModal({ buildingId: b.id, tipIndex })
+      setTimeout(() => setNpcModal(null), 4000)
+    } else {
+      const npc = BUILDING_NPCS[b.id]
+      if (npc) {
+        const tipIndex = Math.floor(Math.random() * npc.tips[lang].length)
+        setNpcBubble({ buildingId: b.id, tipIndex })
+        setTimeout(() => setNpcBubble(null), 3000)
+      }
     }
   }
 
@@ -159,7 +229,15 @@ export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, 
     : 'Every day you practice you grow more! ⭐'
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      {npcModal && (
+        <NPCModal
+          buildingId={npcModal.buildingId}
+          tipIndex={npcModal.tipIndex}
+          lang={lang}
+          onClose={() => setNpcModal(null)}
+        />
+      )}
       <style>{`
         @keyframes buildingPop {
           0% { transform: scale(1); }
@@ -266,18 +344,19 @@ export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, 
                       animation: 'particleFly 800ms ease-out forwards',
                     }}>{p.emoji}</div>
                   ))}
-                  {/* NPC emoji */}
-                  {isUnlocked && BUILDING_NPCS[b.id] && (
+                  {/* NPC emoji badge */}
+                  {isUnlocked && (TOWN_NPCS[b.id] || BUILDING_NPCS[b.id]) && (
                     <div style={{
                       position: 'absolute', bottom: -10, left: '50%', transform: 'translateX(-50%)',
                       fontSize: 20, zIndex: 2,
                     }}>
-                      {BUILDING_NPCS[b.id].emoji}
+                      {BUILDING_NPCS[b.id]?.emoji ?? '💬'}
                     </div>
                   )}
-                  {/* NPC speech bubble */}
+                  {/* Inline speech bubble for non-modal NPCs */}
                   {npcBubble?.buildingId === b.id && (() => {
                     const npc = BUILDING_NPCS[b.id]
+                    if (!npc) return null
                     return (
                       <div style={{
                         position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
