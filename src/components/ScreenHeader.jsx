@@ -1,7 +1,7 @@
 import CoinPill from './CoinPill.jsx'
 import LangPill from './LangPill.jsx'
 
-export default function ScreenHeader({ color, lang, onLang, points, titleEs, titleEn, subtitle, onProfile, childName, childEmoji }) {
+export default function ScreenHeader({ color, lang, onLang, points, titleEs, titleEn, subtitle, onProfile, childName, childEmoji, onBack }) {
   return (
     <div style={{ position: 'relative', zIndex: 2 }}>
       <div style={{
@@ -11,6 +11,18 @@ export default function ScreenHeader({ color, lang, onLang, points, titleEs, tit
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {onBack && (
+              <button onClick={onBack} style={{
+                appearance: 'none', cursor: 'pointer',
+                background: 'rgba(255,255,255,0.22)',
+                border: '2px solid rgba(255,255,255,0.55)',
+                borderRadius: 999, padding: '4px 10px',
+                fontFamily: 'Fredoka', fontWeight: 700, fontSize: 13, color: '#FFFBEB',
+                display: 'flex', alignItems: 'center', gap: 4,
+              }}>
+                🏘️ {lang === 'es' ? 'Mi Pueblo' : 'My Town'}
+              </button>
+            )}
             <CoinPill value={points} dark />
             {childName && (
               <div style={{

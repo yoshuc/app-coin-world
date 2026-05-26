@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { useAuth } from './hooks/useAuth.js'
 import { useLang } from './hooks/useLang.js'
 import { BUILDINGS } from './constants/buildings.js'
-import BottomNav from './components/BottomNav.jsx'
 import MonedaOnboarding from './components/MonedaOnboarding.jsx'
 import ParentalGate from './components/ParentalGate.jsx'
 
@@ -14,8 +13,10 @@ const LoginScreen = lazy(() => import('./screens/LoginScreen.jsx'))
 const RegisterScreen = lazy(() => import('./screens/RegisterScreen.jsx'))
 const RegisterChildScreen = lazy(() => import('./screens/RegisterChildScreen.jsx'))
 const HomeScreen = lazy(() => import('./screens/HomeScreen.jsx'))
-const MarketScreen = lazy(() => import('./screens/MarketScreen.jsx'))
 const LessonScreen = lazy(() => import('./screens/LessonScreen.jsx'))
+const DashboardScreen = lazy(() => import('./screens/DashboardScreen.jsx'))
+const GoalsScreen = lazy(() => import('./screens/GoalsScreen.jsx'))
+const AchievementsScreen = lazy(() => import('./screens/AchievementsScreen.jsx'))
 
 function AuthGuard({ children, auth }) {
   const location = useLocation()
@@ -36,7 +37,7 @@ function AuthGuard({ children, auth }) {
 }
 
 function AppShell({ lang, setLang, auth }) {
-  const [tab, setTab] = useState('town')
+  const [screen, setScreen] = useState('town')
   const [points, setPoints] = useState(auth.child?.points ?? 24)
   const [unlocked, setUnlocked] = useState([BUILDINGS[0].id])
   const [todayEarned, setTodayEarned] = useState(0)
@@ -44,6 +45,8 @@ function AppShell({ lang, setLang, auth }) {
   const [showGate, setShowGate] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
   const [completedLessonIds, setCompletedLessonIds] = useState(new Set())
+  const [activeGoalId, setActiveGoalId] = useState(auth.child?.active_goal_id || null)
+  const [unlockedItemIds, setUnlockedItemIds] = useState(new Set())
 
   const childName = auth.child?.first_name
   const childEmoji = auth.child?.avatar_emoji || '⭐'
@@ -61,6 +64,7 @@ function AppShell({ lang, setLang, auth }) {
   useEffect(() => {
     if (auth.child) {
       setPoints(auth.child.points || 0)
+      setActiveGoalId(auth.child.active_goal_id || null)
     }
   }, [auth.child])
 
@@ -85,6 +89,13 @@ function AppShell({ lang, setLang, auth }) {
     })
   }, [auth.child, auth.loadProgress])
 
+  useEffect(() => {
+    if (!auth.child || !auth.loadUnlockedItems) return
+    auth.loadUnlockedItems().then(ids => {
+      setUnlockedItemIds(new Set(ids))
+    })
+  }, [auth.child, auth.loadUnlockedItems])
+
   function awardEarn(n) {
     const newPoints = points + n
     setPoints(newPoints)
@@ -100,6 +111,17 @@ function AppShell({ lang, setLang, auth }) {
     if (auth.saveDailyPoints) {
       auth.saveDailyPoints(newToday)
     }
+    auth.updateStreak?.()
+  }
+
+  function setGoal(itemId) {
+    setActiveGoalId(itemId)
+    auth.setActiveGoal?.(itemId)
+  }
+
+  function onItemUnlock(itemId) {
+    setUnlockedItemIds(prev => new Set([...prev, itemId]))
+    auth.unlockItem?.(itemId)
   }
 
   return (
@@ -129,49 +151,81 @@ function AppShell({ lang, setLang, auth }) {
         }
       `}</style>
 
-      <div key={tab} style={{
+      <div key={screen} style={{
         position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
         overflow: 'hidden',
         animation: 'cwViewIn 260ms ease-out',
       }}>
-        {tab === 'town' && (
+        {screen === 'town' && (
           <HomeScreen
             lang={lang} setLang={setLang} points={points}
             unlocked={unlocked} todayEarned={todayEarned}
-            goMarket={() => setTab('market')}
-            goLearn={() => setTab('learn')}
             allChildren={auth.allChildren}
             activeChild={auth.child}
             switchChild={auth.switchChild}
-            addChild={auth.addChild}
             onProfile={() => setShowGate(true)}
             childName={childName}
             childEmoji={childEmoji}
+            goTo={setScreen}
           />
         )}
-        {tab === 'market' && (
-          <MarketScreen
-            lang={lang} setLang={setLang} points={points}
-            setPoints={setPoints}
-            completedLessonIds={completedLessonIds}
-            onProfile={() => setShowGate(true)}
-            childName={childName}
-            childEmoji={childEmoji}
-          />
+        {screen === 'dashboard' && (
+          <Suspense fallback={null}>
+            <DashboardScreen
+              lang={lang} setLang={setLang} points={points}
+              todayEarned={todayEarned}
+              child={auth.child}
+              activeGoalId={activeGoalId}
+              onBack={() => setScreen('town')}
+              onProfile={() => setShowGate(true)}
+              childName={childName}
+              childEmoji={childEmoji}
+            />
+          </Suspense>
         )}
-        {tab === 'learn' && (
+        {screen === 'learn' && (
           <LessonScreen
             lang={lang} setLang={setLang} points={points}
             setPoints={setPoints} awardEarn={awardEarn} auth={auth}
             onProfile={() => setShowGate(true)}
             childName={childName}
             childEmoji={childEmoji}
-            onGoTown={() => setTab('town')}
+            onGoTown={() => setScreen('town')}
+            onBack={() => setScreen('town')}
           />
         )}
+        {screen === 'goals' && (
+          <Suspense fallback={null}>
+            <GoalsScreen
+              lang={lang} setLang={setLang} points={points}
+              completedLessonIds={completedLessonIds}
+              activeGoalId={activeGoalId}
+              unlockedItemIds={unlockedItemIds}
+              onSetGoal={setGoal}
+              onItemUnlock={onItemUnlock}
+              onBack={() => setScreen('town')}
+              onProfile={() => setShowGate(true)}
+              childName={childName}
+              childEmoji={childEmoji}
+            />
+          </Suspense>
+        )}
+        {screen === 'achievements' && (
+          <Suspense fallback={null}>
+            <AchievementsScreen
+              lang={lang} setLang={setLang} points={points}
+              completedLessonIds={completedLessonIds}
+              child={auth.child}
+              awardEarn={awardEarn}
+              completeUnit={auth.completeUnit}
+              onBack={() => setScreen('town')}
+              onProfile={() => setShowGate(true)}
+              childName={childName}
+              childEmoji={childEmoji}
+            />
+          </Suspense>
+        )}
       </div>
-
-      <BottomNav tab={tab} onTab={setTab} lang={lang} />
 
       {showOnboarding && (
         <MonedaOnboarding

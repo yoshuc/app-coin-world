@@ -198,6 +198,72 @@ export function useAuth() {
     }, { onConflict: 'child_id,date' })
   }, [child])
 
+  // ALTER TABLE children ADD COLUMN IF NOT EXISTS streak_days int DEFAULT 0;
+  // ALTER TABLE children ADD COLUMN IF NOT EXISTS last_active_date date;
+  const updateStreak = useCallback(async () => {
+    if (!child) return
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: timezone })
+    if (child.last_active_date === today) return
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yest = yesterday.toLocaleDateString('en-CA', { timeZone: timezone })
+    const newStreak = child.last_active_date === yest ? (child.streak_days || 0) + 1 : 1
+    const { error } = await supabase.from('children')
+      .update({ streak_days: newStreak, last_active_date: today })
+      .eq('id', child.id)
+    if (!error) setChild(prev => ({ ...prev, streak_days: newStreak, last_active_date: today }))
+  }, [child])
+
+  // ALTER TABLE children ADD COLUMN IF NOT EXISTS active_goal_id text;
+  const setActiveGoal = useCallback(async (itemId) => {
+    if (!child) return
+    const { error } = await supabase.from('children')
+      .update({ active_goal_id: itemId })
+      .eq('id', child.id)
+    if (!error) setChild(prev => ({ ...prev, active_goal_id: itemId }))
+  }, [child])
+
+  // CREATE TABLE IF NOT EXISTS unlocked_items (
+  //   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  //   child_id uuid REFERENCES children(id) ON DELETE CASCADE,
+  //   item_id text NOT NULL, unlocked_at timestamptz DEFAULT now(),
+  //   UNIQUE(child_id, item_id)
+  // );
+  // ALTER TABLE unlocked_items ENABLE ROW LEVEL SECURITY;
+  // CREATE POLICY "unlocked_items_select" ON unlocked_items FOR SELECT USING (child_id IN (SELECT id FROM children WHERE tutor_id = auth.uid()));
+  // CREATE POLICY "unlocked_items_insert" ON unlocked_items FOR INSERT WITH CHECK (child_id IN (SELECT id FROM children WHERE tutor_id = auth.uid()));
+  const loadUnlockedItems = useCallback(async () => {
+    if (!child) return []
+    const { data } = await supabase.from('unlocked_items').select('item_id').eq('child_id', child.id)
+    return data?.map(r => r.item_id) || []
+  }, [child])
+
+  const unlockItem = useCallback(async (itemId) => {
+    if (!child) return
+    await supabase.from('unlocked_items').upsert(
+      { child_id: child.id, item_id: itemId },
+      { onConflict: 'child_id,item_id' }
+    )
+  }, [child])
+
+  // ALTER TABLE children ADD COLUMN IF NOT EXISTS completed_units jsonb DEFAULT '[]';
+  const completeUnit = useCallback(async (unitNum, onBonus) => {
+    if (!child) return false
+    const done = child.completed_units || []
+    if (done.includes(unitNum)) return false
+    const newDone = [...done, unitNum]
+    const newPoints = (child.points || 0) + 10
+    const { error } = await supabase.from('children')
+      .update({ completed_units: newDone, points: newPoints })
+      .eq('id', child.id)
+    if (!error) {
+      setChild(prev => ({ ...prev, completed_units: newDone, points: newPoints }))
+      if (onBonus) onBonus(10)
+      return true
+    }
+    return false
+  }, [child])
+
   return {
     session,
     user,
@@ -217,5 +283,10 @@ export function useAuth() {
     loadUnlockedBuildings,
     loadDailyPoints,
     saveDailyPoints,
+    updateStreak,
+    setActiveGoal,
+    loadUnlockedItems,
+    unlockItem,
+    completeUnit,
   }
 }

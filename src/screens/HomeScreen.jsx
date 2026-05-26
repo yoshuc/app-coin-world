@@ -21,6 +21,13 @@ const BUILDING_PARTICLES = {
   castle:  ['🏰','👑','✨'],
 }
 
+const BUILDING_SCREENS = {
+  house: 'dashboard',
+  park: 'achievements',
+  school: 'learn',
+  bakery: 'goals',
+}
+
 function playBuildingSound(freq = 523) {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)()
@@ -171,7 +178,63 @@ function NPCModal({ buildingId, tipIndex, lang, onClose }) {
   )
 }
 
-export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, goLearn, todayEarned, allChildren = [], activeChild, switchChild, onProfile, childName, childEmoji }) {
+function CityLifeOverlay({ buildingId }) {
+  if (buildingId === 'house') {
+    return (
+      <div style={{ position: 'absolute', top: 8, left: '28%', pointerEvents: 'none', zIndex: 3 }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={{
+            width: 8, height: 8, borderRadius: '50%',
+            background: 'rgba(180,180,180,0.75)',
+            position: 'absolute', left: i * 4,
+            animation: `smokePuff 4s ease-out ${i * 1.3}s infinite`,
+          }} />
+        ))}
+      </div>
+    )
+  }
+  if (buildingId === 'school') {
+    return (
+      <div style={{ position: 'absolute', top: '35%', right: '22%', pointerEvents: 'none', zIndex: 3 }}>
+        <div style={{
+          width: 10, height: 10, borderRadius: 2,
+          background: 'rgba(251,191,36,0.8)',
+          animation: 'windowFlicker 6s ease-in-out 1s infinite',
+        }} />
+      </div>
+    )
+  }
+  if (buildingId === 'bakery') {
+    return (
+      <div style={{ position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)', pointerEvents: 'none', zIndex: 3 }}>
+        {[0, 1].map(i => (
+          <div key={i} style={{
+            width: 6, height: 10, borderRadius: 4,
+            background: 'rgba(220,220,220,0.7)',
+            position: 'absolute', left: i * 10 - 8,
+            animation: `steamRise 5s ease-out ${i * 1.6}s infinite`,
+          }} />
+        ))}
+      </div>
+    )
+  }
+  if (buildingId === 'park') {
+    return (
+      <div style={{ position: 'absolute', top: '20%', left: '15%', pointerEvents: 'none', zIndex: 3 }}>
+        {['🍃','🍃'].map((leaf, i) => (
+          <span key={i} style={{
+            position: 'absolute', left: i * 14, fontSize: 12,
+            animation: `leafSway 2.5s ease-in-out ${i * 0.7}s infinite`,
+            display: 'inline-block',
+          }}>{leaf}</span>
+        ))}
+      </div>
+    )
+  }
+  return null
+}
+
+export default function HomeScreen({ lang, setLang, points, unlocked, goTo, todayEarned, allChildren = [], activeChild, switchChild, onProfile, childName, childEmoji }) {
   const unlockedCount = unlocked.length
   const total = BUILDINGS.length
   const multiChild = allChildren.length > 1
@@ -183,28 +246,65 @@ export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, 
   const [lockedTip, setLockedTip] = useState(null)
   const [npcBubble, setNpcBubble] = useState(null)
   const [npcModal, setNpcModal] = useState(null)
+  const [zoomingBuilding, setZoomingBuilding] = useState(null)
+
+  function tapLocked(b) {
+    setLockedShake(b.id)
+    setLockedTip(b.id)
+    setTimeout(() => setLockedShake(null), 500)
+    setTimeout(() => setLockedTip(null), 2000)
+  }
 
   function tapBuilding(b) {
+    const targetScreen = BUILDING_SCREENS[b.id]
+    const isUnlocked = unlocked.includes(b.id)
+
+    // School is always navigable
+    if (b.id === 'school') {
+      playBuildingSound(523)
+      setZoomingBuilding(b.id)
+      setTimeout(() => { setZoomingBuilding(null); goTo('learn') }, 320)
+      return
+    }
+
+    if (!isUnlocked) {
+      tapLocked(b)
+      return
+    }
+
+    playBuildingSound(b.id === 'castle' ? 659 : b.id === 'rocket' ? 587 : 523)
+
+    // Navigable buildings: zoom then go
+    if (targetScreen) {
+      setZoomingBuilding(b.id)
+      const emojis = BUILDING_PARTICLES[b.id] || ['✨','⭐','🎉']
+      const newParticles = emojis.flatMap((emoji, ei) =>
+        [0,1].map((_, pi) => ({
+          id: `${b.id}-${ei}-${pi}-${Date.now()}`,
+          emoji, x: (Math.random()-0.5)*80, y: -(40+Math.random()*60),
+        }))
+      )
+      setParticles(prev => [...prev, ...newParticles])
+      setTimeout(() => setParticles(prev => prev.filter(p => !newParticles.find(n => n.id === p.id))), 800)
+      setTimeout(() => { setZoomingBuilding(null); goTo(targetScreen) }, 320)
+      return
+    }
+
+    // Non-navigable: particles + NPC
     setTappedBuilding(b.id)
     setTimeout(() => setTappedBuilding(null), 600)
-
     const emojis = BUILDING_PARTICLES[b.id] || ['✨','⭐','🎉']
     const newParticles = emojis.flatMap((emoji, ei) =>
       [0,1].map((_, pi) => ({
         id: `${b.id}-${ei}-${pi}-${Date.now()}`,
-        emoji,
-        x: (Math.random() - 0.5) * 80,
-        y: -(40 + Math.random() * 60),
+        emoji, x: (Math.random()-0.5)*80, y: -(40+Math.random()*60),
       }))
     )
     setParticles(prev => [...prev, ...newParticles])
     setTimeout(() => setParticles(prev => prev.filter(p => !newParticles.find(n => n.id === p.id))), 800)
 
-    playBuildingSound(b.id === 'castle' ? 659 : b.id === 'rocket' ? 587 : 523)
-
     if (TOWN_NPCS[b.id]) {
-      const npc = TOWN_NPCS[b.id]
-      const tipIndex = Math.floor(Math.random() * npc.tipsEs.length)
+      const tipIndex = Math.floor(Math.random() * TOWN_NPCS[b.id].tipsEs.length)
       setNpcModal({ buildingId: b.id, tipIndex })
       setTimeout(() => setNpcModal(null), 4000)
     } else {
@@ -215,13 +315,6 @@ export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, 
         setTimeout(() => setNpcBubble(null), 3000)
       }
     }
-  }
-
-  function tapLocked(b) {
-    setLockedShake(b.id)
-    setLockedTip(b.id)
-    setTimeout(() => setLockedShake(null), 500)
-    setTimeout(() => setLockedTip(null), 2000)
   }
 
   const monedaTipText = lang === 'es'
@@ -256,6 +349,28 @@ export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, 
           60% { transform: translateX(-5px); }
           80% { transform: translateX(5px); }
         }
+        @keyframes buildingZoomIn {
+          0% { transform: scale(1); opacity: 1; }
+          60% { transform: scale(1.18); opacity: 0.9; }
+          100% { transform: scale(1.5); opacity: 0; }
+        }
+        @keyframes smokePuff {
+          0% { transform: translateY(0) scale(0.5); opacity: 0.7; }
+          100% { transform: translateY(-28px) scale(1.4); opacity: 0; }
+        }
+        @keyframes windowFlicker {
+          0%, 90%, 100% { opacity: 0.7; }
+          93% { opacity: 0.1; }
+          96% { opacity: 0.8; }
+        }
+        @keyframes steamRise {
+          0% { transform: translateY(0) scaleX(1); opacity: 0.6; }
+          100% { transform: translateY(-24px) scaleX(1.5); opacity: 0; }
+        }
+        @keyframes leafSway {
+          0%, 100% { transform: rotate(-12deg) translateX(0); }
+          50% { transform: rotate(12deg) translateX(4px); }
+        }
       `}</style>
 
       <EmailBanner lang={lang} />
@@ -277,7 +392,7 @@ export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, 
         childEmoji={childEmoji}
       />
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '22px 16px 140px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '22px 16px 40px' }}>
         <div style={{
           background: COLORS.yellow, borderRadius: 18,
           border: `3px solid ${COLORS.ink}`, boxShadow: `0 4px 0 ${COLORS.ink}`,
@@ -321,20 +436,28 @@ export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, 
             const isUnlocked = unlocked.includes(b.id)
             return (
               <div key={b.id}
-                onClick={() => isUnlocked ? tapBuilding(b) : tapLocked(b)}
+                onClick={() => tapBuilding(b)}
                 style={{
                   background: '#FFFFFF', borderRadius: 18,
                   border: `3px solid ${isUnlocked ? COLORS.ink : '#D1D5DB'}`,
                   boxShadow: isUnlocked ? `0 4px 0 ${COLORS.ink}` : 'none',
                   padding: 10, position: 'relative', aspectRatio: '1 / 1',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  cursor: isUnlocked ? 'pointer' : 'default',
-                  animation: tappedBuilding === b.id ? 'buildingPop 600ms ease-out' : lockedShake === b.id ? 'buildingShake 500ms ease-out' : 'none',
+                  cursor: 'pointer',
+                  animation: zoomingBuilding === b.id
+                    ? 'buildingZoomIn 320ms ease-in forwards'
+                    : tappedBuilding === b.id
+                      ? 'buildingPop 600ms ease-out'
+                      : lockedShake === b.id
+                        ? 'buildingShake 500ms ease-out'
+                        : 'none',
                 }}>
                 <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Building id={b.id} color={b.color} locked={!isUnlocked} size={108} />
                   </div>
+                  {/* City life overlay */}
+                  {isUnlocked && <CityLifeOverlay buildingId={b.id} />}
                   {/* particles */}
                   {particles.filter(p => p.id.startsWith(b.id)).map(p => (
                     <div key={p.id} style={{
@@ -390,24 +513,16 @@ export default function HomeScreen({ lang, setLang, points, unlocked, goMarket, 
                   fontFamily: KIDS_FONT, fontWeight: 700, fontSize: 13,
                   color: isUnlocked ? COLORS.ink : '#9CA3AF',
                   textAlign: 'center', marginTop: 2,
-                }}>{isUnlocked ? (lang === 'es' ? b.es : b.en) : `${b.cost} ★`}</div>
+                }}>
+                  {isUnlocked
+                    ? (lang === 'es' ? b.es : b.en) + (BUILDING_SCREENS[b.id] ? ' →' : '')
+                    : `${b.cost} ★`
+                  }
+                </div>
               </div>
             )
           })}
         </div>
-
-        <ChunkyButton color={COLORS.green} fullWidth onClick={goMarket}
-                      style={{ color: '#FFFBEB', fontSize: 22 }}>
-          🛒  {t(lang, 'goToMarket')}
-        </ChunkyButton>
-
-        <button onClick={goLearn} style={{
-          marginTop: 10, width: '100%', appearance: 'none', cursor: 'pointer',
-          background: '#FFFBEB', border: `3px dashed ${COLORS.purple}`, color: COLORS.purple,
-          borderRadius: 16, padding: '12px', fontFamily: KIDS_FONT, fontWeight: 700, fontSize: 16,
-        }}>
-          📚  {lang === 'es' ? '¡Aprende y gana monedas!' : 'Learn & earn coins!'}
-        </button>
       </div>
     </div>
   )

@@ -496,8 +496,9 @@ export default function LessonScreen({ lang, setLang, points, setPoints, awardEa
         <>
           <ScreenHeader
             color={COLORS.purple} lang={lang} onLang={setLang} points={points}
-            titleEs="Aprender" titleEn="Learn"
+            titleEs="La Escuela" titleEn="The School"
             onProfile={onProfile}
+            onBack={onGoTown}
             childName={childName}
             childEmoji={childEmoji}
           />
